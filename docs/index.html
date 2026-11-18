@@ -3,61 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Said: lokalny rejestrator głosu dla macOS</title>
-<meta name="description" content="Nagrywaj i transkrybuj głos na Macu. Bez chmury, bez internetu.">
+<title>Said</title>
+<meta name="description" content="Nagrywasz głos na Macu, dostajesz tekst. Wszystko zostaje u Ciebie.">
 <link rel="icon" href="icon.png">
 <style>
-  :root { --bg:#000; --fg:#fff; --muted:#9a9a9a; --line:#222; --red:#ff3b30; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg);
-         font:16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
-  main { max-width:680px; margin:0 auto; padding:72px 16px 48px; }
-  .logo { width:112px; height:112px; display:block; margin:0 0 24px -8px; }
-  h1 { font-size:44px; line-height:1.1; margin:0 0 12px; letter-spacing:-0.02em; }
-  .lead { color:var(--muted); font-size:19px; margin:0 0 40px; }
-  .cmd { display:flex; align-items:center; gap:12px; background:#0d0d0d; border:1px solid var(--line);
-         border-radius:14px; padding:14px 14px 14px 18px; }
-  .cmd code { flex:1; overflow-x:auto; white-space:nowrap; font:14px/1.4 ui-monospace, "SF Mono", Menlo, monospace; }
-  .cmd code::before { content:"$ "; color:var(--muted); }
-  button { flex:none; background:var(--fg); color:var(--bg); border:0; border-radius:9px; padding:8px 14px;
-           font:600 14px/1 inherit; font-family:inherit; cursor:pointer; }
-  button:active { transform:translateY(1px); }
-  .hint { color:var(--muted); font-size:14px; margin:12px 0 48px; }
-  ul { list-style:none; padding:0; margin:0 0 48px; display:grid; gap:14px; }
-  li { padding-left:22px; position:relative; }
-  li::before { content:""; position:absolute; left:0; top:.6em; width:8px; height:8px; border-radius:50%; background:var(--red); }
-  li b { font-weight:600; }
-  footer { border-top:1px solid var(--line); padding-top:20px; color:var(--muted); font-size:14px; }
-  a { color:var(--fg); }
-  @media (max-width:520px) { h1 { font-size:34px; } main { padding-top:48px; } }
+  body { margin: 0; background: #000; color: #fff;
+         font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  main { max-width: 620px; margin: 0 auto; padding: 64px 16px; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 24px; }
+  h2 { font-size: 17px; font-weight: 600; margin: 40px 0 8px; }
+  p { margin: 0 0 16px; }
+  pre { margin: 0 0 16px; padding: 12px 0; overflow-x: auto;
+        font: 14px/1.5 ui-monospace, Menlo, monospace; }
+  code { font: 14px ui-monospace, Menlo, monospace; }
+  button { background: none; color: #fff; border: 1px solid #fff; border-radius: 6px;
+           padding: 4px 10px; font: inherit; font-size: 14px; cursor: pointer; }
+  a { color: #fff; }
 </style>
 </head>
 <body>
 <main>
-  <img class="logo" src="icon.png" alt="">
   <h1>Said</h1>
-  <p class="lead">Nagrywaj głos jednym kliknięciem w pasku menu i dostań gotową transkrypcję. Wszystko zostaje na Twoim Macu.</p>
 
-  <div class="cmd">
-    <code id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</code>
-    <button id="copy" type="button">Kopiuj</button>
-  </div>
-  <p class="hint">Wklej do Terminala. Komenda pobiera kod, buduje aplikację na Twoim Macu i instaluje ją w Aplikacjach. Wymaga macOS 14+ i narzędzi Xcode Command Line Tools (instalator zaproponuje je sam). Uruchom ponownie, żeby zaktualizować.</p>
+  <p>Said to mała aplikacja na Maca do nagrywania głosu. Klikasz ikonę na górnym pasku, mówisz, klikasz stop. Po chwili masz nagranie i jego tekst.</p>
 
-  <ul>
-    <li><b>Pasek menu, bez Docka.</b> Said żyje przy zegarze i nie zajmuje miejsca w Docku.</li>
-    <li><b>Pływająca pastylka.</b> Mała czarna pastylka z animacją głosu. Przeciągnij ją, gdzie chcesz.</li>
-    <li><b>Lokalna transkrypcja.</b> Whisper large-v3 turbo na Neural Engine. Polski, angielski i inne języki.</li>
-    <li><b>Folder na każde nagranie.</b> <code>~/Music/Said/&lt;data&gt;/</code> z plikiem audio i transkrypcją w Markdown.</li>
-    <li><b>Zero chmury.</b> Internet jest potrzebny tylko raz, do pobrania modelu (~630 MB).</li>
-  </ul>
+  <p>Nic nie trafia do internetu. Nagranie i tekst zostają na Twoim komputerze.</p>
 
-  <footer>Open source, licencja MIT · <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></footer>
+  <h2>Instalacja</h2>
+  <p>Otwórz Terminal, wklej tę linijkę i naciśnij Enter:</p>
+  <pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre>
+  <p><button id="copy" type="button">Kopiuj</button></p>
+  <p>Instalacja trwa kilka minut. Potrzebujesz macOS 14 albo nowszego. Jeśli Mac poprosi o doinstalowanie narzędzi Apple, zgódź się i uruchom komendę jeszcze raz. Tą samą komendą później aktualizujesz aplikację.</p>
+
+  <h2>Jak to działa</h2>
+  <p>Po instalacji Said siedzi na górnym pasku obok zegara. W Docku go nie ma. Podczas nagrywania na dole ekranu pojawia się mała czarna pastylka z czasem i przyciskiem stop. Możesz ją przesunąć w dowolne miejsce.</p>
+  <p>Każde nagranie trafia do osobnego folderu w <code>Muzyka/Said</code>, razem z plikiem tekstowym.</p>
+  <p>Do zamiany mowy na tekst Said potrzebuje modelu językowego. Pobierasz go raz (około 630 MB) przyciskiem w menu. Potem wszystko działa bez internetu. Said rozumie polski, angielski i wiele innych języków.</p>
+
+  <h2>Kod</h2>
+  <p>Said jest darmowy i otwarty (licencja MIT). Kod: <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
 </main>
 <script>
   document.getElementById('copy').addEventListener('click', async (e) => {
-    const text = document.getElementById('cmd').textContent;
-    try { await navigator.clipboard.writeText(text); e.target.textContent = 'Skopiowano'; }
+    try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent); e.target.textContent = 'Skopiowano'; }
     catch { e.target.textContent = 'Zaznacz i skopiuj'; }
     setTimeout(() => e.target.textContent = 'Kopiuj', 1800);
   });

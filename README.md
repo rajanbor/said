@@ -28,6 +28,12 @@ curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bas
 
 Skrypt pobiera kod do `~/.said/src`, buduje aplikację na Twoim Macu i instaluje `Said.app` w `/Applications`. Jeśli nie masz uprawnień do zapisu w `/Applications`, trafia do `~/Applications`. Wymaga macOS 14+ i Xcode Command Line Tools (instalator sam je zaproponuje). Uruchom komendę ponownie, żeby zaktualizować.
 
+Instalator bierze najnowsze wydanie (tag `vX.Y.Z`). Najnowszy kod z `main` albo konkretna wersja:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | SAID_VERSION=main bash
+```
+
 Odinstalowanie:
 
 ```bash
@@ -70,9 +76,22 @@ Sources/Said/
 Resources/          Info.plist, AppIcon.icns
 scripts/build-app.sh   buduje build/Said.app
 scripts/make-icon.swift  generuje ikonę
+scripts/release.sh     nowe wydanie (tag + GitHub release)
 install.sh          instalator (curl | bash)
 docs/               strona www (GitHub Pages)
 ```
+
+## Wersje
+
+Numeracja według [SemVer](https://semver.org/lang/pl/), historia zmian w [CHANGELOG.md](CHANGELOG.md). Wersja jest widoczna na dole menu aplikacji.
+
+Nowe wydanie: dopisz sekcję `## [X.Y.Z] - data` w `CHANGELOG.md`, a potem uruchom:
+
+```bash
+./scripts/release.sh X.Y.Z
+```
+
+Skrypt podbija wersję w `Info.plist`, sprawdza, czy aplikacja się buduje, tworzy commit i tag `vX.Y.Z`, wypycha je i tworzy wydanie na GitHubie.
 
 ## Roadmapa (pomysły)
 

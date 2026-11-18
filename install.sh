@@ -8,6 +8,8 @@ set -euo pipefail
 
 REPO="${SAID_REPO:-https://github.com/rajanbor/said.git}"
 SRC="${SAID_SRC:-$HOME/.said/src}"
+# Installs the newest release tag (vX.Y.Z). Set SAID_VERSION=main for the latest code, or e.g. v0.1.0.
+REF="${SAID_VERSION:-}"
 
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 fail() { printf '\033[31mError:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -22,16 +24,22 @@ if ! xcrun --find swift >/dev/null 2>&1 || ! command -v git >/dev/null 2>&1; the
   fail "Po zakończeniu instalacji narzędzi uruchom tę komendę ponownie."
 fi
 
-if [[ -d "$SRC/.git" ]]; then
-  say "Aktualizuję kod w $SRC"
-  git -C "$SRC" fetch --quiet --depth 1 origin main
-  git -C "$SRC" reset --quiet --hard FETCH_HEAD
-else
-  say "Pobieram kod do $SRC"
-  rm -rf "$SRC"
-  mkdir -p "$(dirname "$SRC")"
-  git clone --quiet --depth 1 "$REPO" "$SRC"
+if [[ -z "$REF" ]]; then
+  REF="$(git ls-remote --tags --refs "$REPO" 'v*' | awk -F/ '{print $3}' | sort -V | tail -n 1)"
+  REF="${REF:-main}"
 fi
+
+if [[ ! -d "$SRC/.git" ]]; then
+  say "Pobieram Said ($REF) do $SRC"
+  rm -rf "$SRC"
+  mkdir -p "$SRC"
+  git -C "$SRC" init --quiet
+  git -C "$SRC" remote add origin "$REPO"
+else
+  say "Aktualizuję Said do $REF"
+fi
+git -C "$SRC" fetch --quiet --depth 1 --force origin "$REF"
+git -C "$SRC" reset --quiet --hard FETCH_HEAD
 
 say "Buduję Said (pierwszy raz może potrwać kilka minut)…"
 LOG="$HOME/.said/build.log"
@@ -49,6 +57,7 @@ pkill -x Said >/dev/null 2>&1 || true
 rm -rf "$DEST/Said.app"
 cp -R "$SRC/build/Said.app" "$DEST/Said.app"
 
-say "Zainstalowano: $DEST/Said.app"
+VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$DEST/Said.app/Contents/Info.plist")"
+say "Zainstalowano Said $VERSION: $DEST/Said.app"
 open "$DEST/Said.app"
 say "Said działa — szukaj ikony w pasku menu (prawy górny róg)."

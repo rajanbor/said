@@ -4,6 +4,8 @@ struct MenuView: View {
     @EnvironmentObject var recorder: Recorder
     @EnvironmentObject var transcriber: Transcriber
 
+    static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Button(action: recorder.toggle) {
@@ -29,7 +31,7 @@ struct MenuView: View {
 
             Divider()
             HStack {
-                Text("Lokalnie · bez internetu").font(.caption2).foregroundStyle(.tertiary)
+                Text("Said \(Self.version) · lokalnie").font(.caption2).foregroundStyle(.tertiary)
                 Spacer()
                 Button("Wyjdź") { NSApplication.shared.terminate(nil) }
                     .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
