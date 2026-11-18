@@ -22,21 +22,21 @@ struct MenuView: View {
 
             if let last = recorder.last, !recorder.isRecording {
                 Separator()
-                SectionTitle("Ostatnie nagranie")
+                SectionTitle(L("Last recording"))
                 lastRecording(last)
             }
 
             Separator()
-            MenuRow("Otwórz folder z nagraniami", systemImage: "folder", action: recorder.openFolder)
+            MenuRow(L("Open recordings folder"), systemImage: "folder", action: recorder.openFolder)
 
             Separator()
-            SectionTitle("Ustawienia")
+            SectionTitle(L("Settings"))
             MeetingToggle(detector: recorder.meetings)
-            ToggleRow("Nagrywaj dźwięk z komputera", isOn: $recorder.recordSystemAudio)
+            ToggleRow(L("Record system audio"), isOn: $recorder.recordSystemAudio)
             modelStatus
 
             Separator()
-            MenuRow("Zakończ Said", shortcut: "⌘Q") { NSApplication.shared.terminate(nil) }
+            MenuRow(L("Quit Said"), shortcut: "⌘Q") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
         .padding(5)
@@ -58,10 +58,10 @@ struct MenuView: View {
     @ViewBuilder
     private var recordRow: some View {
         if recorder.isRecording {
-            MenuRow("Zatrzymaj nagrywanie", systemImage: "stop.circle.fill", tint: .red,
+            MenuRow(L("Stop recording"), systemImage: "stop.circle.fill", tint: .red,
                     trailing: recorder.elapsed.clock, action: recorder.stop)
         } else {
-            MenuRow("Nagraj", systemImage: "record.circle", tint: .red, action: recorder.start)
+            MenuRow(L("Record"), systemImage: "record.circle", tint: .red, action: recorder.start)
         }
     }
 
@@ -84,16 +84,16 @@ struct MenuView: View {
         .padding(.bottom, 4)
 
         if recorder.isSaving {
-            Hint(text: "Zapisywanie…", progress: true)
+            Hint(text: L("Saving…"), progress: true)
         } else if transcriber.state == .transcribing {
-            Hint(text: "Transkrypcja w toku…", progress: true)
+            Hint(text: L("Transcribing…"), progress: true)
         } else if last.transcriptPath != nil {
-            MenuRow("Otwórz transkrypcję", systemImage: "doc.text", action: recorder.openTranscript)
+            MenuRow(L("Open transcript"), systemImage: "doc.text", action: recorder.openTranscript)
         } else if transcriber.state == .ready {
-            MenuRow("Zrób transkrypcję", systemImage: "text.badge.plus", action: recorder.transcribeLast)
+            MenuRow(L("Transcribe"), systemImage: "text.badge.plus", action: recorder.transcribeLast)
         }
-        MenuRow("Pokaż w Finderze", systemImage: "magnifyingglass", action: recorder.revealLast)
-        MenuRow("Kopiuj ścieżkę", systemImage: "doc.on.doc", action: recorder.copyLastPath)
+        MenuRow(L("Show in Finder"), systemImage: "magnifyingglass", action: recorder.revealLast)
+        MenuRow(L("Copy path"), systemImage: "doc.on.doc", action: recorder.copyLastPath)
     }
 
     private func details(_ r: Recording) -> String {
@@ -105,19 +105,19 @@ struct MenuView: View {
     private var modelStatus: some View {
         switch transcriber.state {
         case .notInstalled:
-            MenuRow("Pobierz model transkrypcji", systemImage: "arrow.down.circle",
+            MenuRow(L("Download transcription model"), systemImage: "arrow.down.circle",
                     trailing: "630 MB") { Task { await transcriber.installModel() } }
         case .downloading(let p):
             VStack(alignment: .leading, spacing: 4) {
-                Text("Pobieranie modelu… \(Int(p * 100))%").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(L("Downloading model… %d%%", Int(p * 100))).font(.system(size: 11)).foregroundStyle(.secondary)
                 ProgressView(value: p).controlSize(.small)
             }
             .padding(.horizontal, 9).padding(.vertical, 4)
         case .preparing:
-            Hint(text: "Przygotowywanie modelu transkrypcji…", progress: true)
+            Hint(text: L("Preparing transcription model…"), progress: true)
         case .failed(let message):
             Hint(text: message, systemImage: "exclamationmark.circle.fill", tint: .red)
-            MenuRow(transcriber.isInstalled ? "Spróbuj ponownie" : "Pobierz model transkrypcji",
+            MenuRow(transcriber.isInstalled ? L("Try again") : L("Download transcription model"),
                     systemImage: "arrow.clockwise") { Task { await transcriber.installModel() } }
         case .ready, .transcribing:
             EmptyView()
@@ -209,8 +209,8 @@ private struct MeetingToggle: View {
     @ObservedObject var detector: MeetingDetector
 
     var body: some View {
-        ToggleRow("Proponuj nagrywanie spotkań", isOn: $detector.isEnabled,
-                  subtitle: detector.active.map { "Teraz: \($0.name)" })
+        ToggleRow(L("Offer to record meetings"), isOn: $detector.isEnabled,
+                  subtitle: detector.active.map { L("Now: %@", $0.name) })
     }
 }
 

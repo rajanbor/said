@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>Said</string>
 	<key>CFBundleExecutable</key>
@@ -10,6 +12,11 @@
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>io.github.rajanbor.said</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>pl</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>Said</string>
 	<key>CFBundlePackageType</key>
@@ -34,8 +41,8 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>Said nagrywa dźwięk spotkania (głosy rozmówców) i zapisuje go lokalnie na tym Macu.</string>
+	<string>Said records meeting audio, including the other participants, and saves it locally on this Mac.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Said nagrywa Twój głos i zapisuje go lokalnie na tym Macu.</string>
+	<string>Said records your voice and saves it locally on this Mac.</string>
 </dict>
 </plist>

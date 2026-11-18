@@ -116,13 +116,13 @@ struct PillView: View {
                     .background(Color.red, in: Circle())
             }
             .buttonStyle(.plain)
-            .help("Zakończ nagrywanie")
+            .help(L("Stop recording"))
         }
         .modifier(PillBackground())
     }
 }
 
-/// "Zoom — nagrać i przepisać?" shown when a meeting starts.
+/// "Zoom · Record and transcribe?" shown when a meeting starts.
 struct MeetingPromptView: View {
     @EnvironmentObject var recorder: Recorder
 
@@ -133,10 +133,10 @@ struct MeetingPromptView: View {
                 .foregroundStyle(Color.white.opacity(0.7))
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(recorder.promptMeeting?.name ?? "Spotkanie")
+                Text(recorder.promptMeeting?.name ?? L("Meeting"))
                     .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
-                Text("Nagrać i przepisać?")
+                Text(L("Record and transcribe?"))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.white.opacity(0.6))
             }
@@ -145,7 +145,7 @@ struct MeetingPromptView: View {
             Spacer(minLength: 4)
 
             Button(action: recorder.acceptMeetingPrompt) {
-                Text("Nagraj")
+                Text(L("Record"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.black)
                     .padding(.horizontal, 10)
@@ -161,7 +161,7 @@ struct MeetingPromptView: View {
                     .frame(width: 18, height: 18)
             }
             .buttonStyle(.plain)
-            .help("Nie teraz")
+            .help(L("Not now"))
         }
         .modifier(PillBackground())
     }

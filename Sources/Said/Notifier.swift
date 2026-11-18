@@ -12,7 +12,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     /// Call at launch so taps on notification actions reach us.
     func setUp() {
         center.delegate = self
-        let stop = UNNotificationAction(identifier: Self.stopAction, title: "Zatrzymaj nagrywanie", options: [])
+        let stop = UNNotificationAction(identifier: Self.stopAction, title: L("Stop recording"), options: [])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: Self.category, actions: [stop], intentIdentifiers: [])
         ])

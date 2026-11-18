@@ -4,7 +4,7 @@ import WhisperKit
 /// Local speech-to-text with Whisper (Core ML, Apple Neural Engine).
 ///
 /// Network is used **only** inside `installModel()`, which runs when the user
-/// clicks "Pobierz model". After that, models load from disk with downloads disabled.
+/// clicks "Download transcription model". After that, models load from disk with downloads disabled.
 @MainActor
 final class Transcriber: ObservableObject {
     enum State: Equatable {
@@ -62,7 +62,7 @@ final class Transcriber: ObservableObject {
             // First load may also fetch the tokenizer into modelsDir (still part of setup).
             await load(allowDownload: true)
         } catch {
-            state = .failed("Nie udało się pobrać modelu: \(error.localizedDescription)")
+            state = .failed(L("Couldn't download the model: %@", error.localizedDescription))
         }
     }
 
@@ -91,7 +91,7 @@ final class Transcriber: ObservableObject {
             kit = try await WhisperKit(config)
             state = .ready
         } catch {
-            state = .failed("Nie udało się wczytać modelu: \(error.localizedDescription)")
+            state = .failed(L("Couldn't load the model: %@", error.localizedDescription))
         }
     }
 
@@ -116,7 +116,7 @@ final class Transcriber: ObservableObject {
             try md.write(to: url, atomically: true, encoding: .utf8)
             return url
         } catch {
-            state = .failed("Transkrypcja nie powiodła się: \(error.localizedDescription)")
+            state = .failed(L("Transcription failed: %@", error.localizedDescription))
             return nil
         }
     }
@@ -124,21 +124,21 @@ final class Transcriber: ObservableObject {
     private static func markdown(for rec: Recording, segments: [TranscriptionSegment], language: String) -> String {
         let date = rec.date.formatted(date: .long, time: .shortened)
         var lines = [
-            "# Nagranie \(date)",
+            "# " + L("Recording %@", date),
             "",
-            "- Plik: `\(rec.url.lastPathComponent)`",
-            "- Czas: \(rec.duration.clock)",
-        ] + (rec.source.map { ["- Spotkanie: \($0)"] } ?? []) + [
-            "- Język: \(language)",
+            "- \(L("File")): `\(rec.url.lastPathComponent)`",
+            "- \(L("Duration")): \(rec.duration.clock)",
+        ] + (rec.source.map { ["- \(L("Meeting")): \($0)"] } ?? []) + [
+            "- \(L("Language")): \(language)",
             "",
-            "## Transkrypcja",
+            "## " + L("Transcript"),
             "",
         ]
         let body = segments
             .map { ($0.start, $0.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
             .filter { !$0.1.isEmpty }
             .map { "**[\(TimeInterval($0.0).clock)]** \($0.1)" }
-        lines += body.isEmpty ? ["_(brak rozpoznanej mowy)_"] : body.flatMap { [$0, ""] }
+        lines += body.isEmpty ? ["_" + L("(no speech detected)") + "_"] : body.flatMap { [$0, ""] }
         return lines.joined(separator: "\n")
     }
 }

@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Said records your voice and saves it locally on this Mac.";
+"NSAudioCaptureUsageDescription" = "Said records meeting audio, including the other participants, and saves it locally on this Mac.";

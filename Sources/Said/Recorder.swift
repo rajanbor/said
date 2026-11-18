@@ -221,7 +221,7 @@ final class Recorder: ObservableObject {
 
     private func beginRecording() {
         if let free = Self.freeSpace(), free < Self.criticalDisk {
-            error = "Za mało miejsca na dysku (\(Self.bytes(free))). Zwolnij miejsce, żeby nagrywać."
+            error = L("Not enough disk space (%@). Free up some space to record.", Self.bytes(free))
             recordingMeeting = nil
             return
         }
@@ -250,7 +250,7 @@ final class Recorder: ObservableObject {
             let r = try AVAudioRecorder(url: url, settings: settings)
             r.isMeteringEnabled = true
             guard r.record() else { throw NSError(domain: "Said", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Nie udało się rozpocząć nagrywania."]) }
+                userInfo: [NSLocalizedDescriptionKey: L("Couldn't start recording.")]) }
 
             recorder = r
             session = Session(final: final, mic: url,
@@ -288,7 +288,7 @@ final class Recorder: ObservableObject {
             return url
         } catch {
             t.stop()
-            self.error = "Nagrywam tylko mikrofon: \(error.localizedDescription)"
+            self.error = L("Recording the microphone only: %@", error.localizedDescription)
             return nil
         }
     }
@@ -325,9 +325,9 @@ final class Recorder: ObservableObject {
         if !silenceNotified, now.timeIntervalSince(since) >= silenceLimit {
             silenceNotified = true
             let minutes = Int(silenceLimit / 60)
-            notice = "Cisza od \(minutes) min"
-            Notifier.shared.post(id: "silence", title: "Said nadal nagrywa",
-                                 body: "Od \(minutes) min nic nie słychać. Zatrzymać nagrywanie?")
+            notice = L("Silent for %d min", minutes)
+            Notifier.shared.post(id: "silence", title: L("Said is still recording"),
+                                 body: L("Nothing has been heard for %d min. Stop recording?", minutes))
         }
     }
 
@@ -338,14 +338,14 @@ final class Recorder: ObservableObject {
         if free < Self.criticalDisk {
             stop()
             notice = nil
-            Notifier.shared.post(id: "disk", title: "Nagranie zatrzymane",
-                                 body: "Kończy się miejsce na dysku (zostało \(Self.bytes(free))). Nagranie zostało zapisane.",
+            Notifier.shared.post(id: "disk", title: L("Recording stopped"),
+                                 body: L("Your disk is almost full (%@ left). The recording has been saved.", Self.bytes(free)),
                                  offerStop: false)
         } else if free < Self.lowDisk, !diskWarned {
             diskWarned = true
-            notice = "Mało miejsca: \(Self.bytes(free))"
-            Notifier.shared.post(id: "disk", title: "Mało miejsca na dysku",
-                                 body: "Zostało \(Self.bytes(free)). Said zatrzyma nagrywanie przy \(Self.bytes(Self.criticalDisk)).")
+            notice = L("Low disk space: %@", Self.bytes(free))
+            Notifier.shared.post(id: "disk", title: L("Low disk space"),
+                                 body: L("%@ left. Said will stop recording at %@.", Self.bytes(free), Self.bytes(Self.criticalDisk)))
         }
     }
 
@@ -361,7 +361,7 @@ final class Recorder: ObservableObject {
 
     private func denied() {
         recordingMeeting = nil
-        error = "Brak dostępu do mikrofonu. Włącz go w Ustawieniach systemowych → Prywatność i ochrona → Mikrofon."
+        error = L("No microphone access. Turn it on in System Settings → Privacy & Security → Microphone.")
     }
 
     // MARK: - URL scheme (said://start, said://stop, said://toggle) — Shortcuts, Raycast…

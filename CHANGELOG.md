@@ -2,6 +2,13 @@
 
 Said follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-18
+
+- **English interface.** The app is now in English, with a Polish translation. Said follows your system language.
+- Transcript headings (File, Duration, Language, Transcript) are in the same language as the app.
+- Permission prompts are translated too.
+- Translations live in `Resources/<language>.lproj`, so adding a language means adding one file (see README).
+
 ## [0.3.1] - 2026-11-18
 
 - **Silence warning.** After 2 minutes without sound, Said sends a notification with a **Stop recording** button, and shows the same warning in the menu.

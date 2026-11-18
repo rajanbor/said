@@ -36,7 +36,7 @@ final class SystemAudioTap {
         description.isPrivate = true
         description.muteBehavior = .unmuted
 
-        try check(AudioHardwareCreateProcessTap(description, &tapID), "utworzyć tapu audio")
+        try check(AudioHardwareCreateProcessTap(description, &tapID), L("Couldn't create the audio tap."))
 
         let outputUID = try Self.defaultOutputDeviceUID()
         let aggregate: [String: Any] = [
@@ -53,11 +53,11 @@ final class SystemAudioTap {
             ]],
         ]
         try check(AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &aggregateID),
-                  "utworzyć urządzenia audio")
+                  L("Couldn't create the audio device."))
 
         var asbd = try Self.tapFormat(tapID)
         guard let format = AVAudioFormat(streamDescription: &asbd) else {
-            throw Self.error("Nieobsługiwany format dźwięku systemowego.")
+            throw Self.error(L("Unsupported system audio format."))
         }
         // Encode to AAC on the fly: ~0.7 MB per minute instead of ~23 MB for raw float PCM.
         let aac: [String: Any] = [
@@ -84,8 +84,8 @@ final class SystemAudioTap {
                 let rms = Self.rms(buffer)
                 levelLock.withLock { $0 = rms }
             }
-        }, "uruchomić odczytu dźwięku")
-        try check(AudioDeviceStart(aggregateID, procID), "uruchomić nagrywania dźwięku systemowego")
+        }, L("Couldn't start reading audio."))
+        try check(AudioDeviceStart(aggregateID, procID), L("Couldn't start recording system audio."))
     }
 
     func stop() {
@@ -124,13 +124,13 @@ final class SystemAudioTap {
         var device = AudioObjectID(kAudioObjectUnknown)
         var size = UInt32(MemoryLayout<AudioObjectID>.size)
         guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &device) == noErr
-        else { throw error("Brak domyślnego wyjścia audio.") }
+        else { throw error(L("No default audio output.")) }
 
         addr = address(kAudioDevicePropertyDeviceUID)
         var uid: Unmanaged<CFString>?
         size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         let status = withUnsafeMutablePointer(to: &uid) { AudioObjectGetPropertyData(device, &addr, 0, nil, &size, $0) }
-        guard status == noErr, let uid else { throw error("Nie można odczytać wyjścia audio.") }
+        guard status == noErr, let uid else { throw error(L("Couldn't read the audio output.")) }
         return uid.takeRetainedValue() as String
     }
 
@@ -139,12 +139,12 @@ final class SystemAudioTap {
         var asbd = AudioStreamBasicDescription()
         var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
         guard AudioObjectGetPropertyData(tap, &addr, 0, nil, &size, &asbd) == noErr
-        else { throw error("Nie można odczytać formatu dźwięku systemowego.") }
+        else { throw error(L("Couldn't read the system audio format.")) }
         return asbd
     }
 
     private func check(_ status: OSStatus, _ what: String) throws {
-        guard status == noErr else { throw Self.error("Nie udało się \(what) (kod \(status)).") }
+        guard status == noErr else { throw Self.error("\(what) (\(status))") }
     }
 
     private static func error(_ message: String) -> NSError {
