@@ -6,6 +6,14 @@ A small, **local-first** voice recorder for macOS. Click the icon in the menu ba
 
 **Website:** https://rajanbor.github.io/said/ ([Polska wersja](https://rajanbor.github.io/said/pl/))
 
+<p>
+  <img src="docs/screenshots/pill.webp" width="420" alt="The recording pill at the bottom of the screen: a red dot, a live waveform, the timer 00:09 and a red stop button">
+  &nbsp;
+  <img src="docs/screenshots/menu.jpg" width="345" alt="The Said menu in the menu bar: Record, Open recordings folder, settings for meeting detection and system audio, and Quit">
+</p>
+
+*Left: the recording pill. Right: the menu (shown in Polish, the app follows your system language).*
+
 ## Install
 
 Paste into Terminal:
