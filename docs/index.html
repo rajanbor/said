@@ -7,55 +7,102 @@
 <meta name="description" content="Record your voice on a Mac and get the text. Everything stays on your computer.">
 <link rel="icon" href="icon.png">
 <style>
-  body { margin: 0; background: #000; color: #fff;
-         font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
-  main { max-width: 620px; margin: 0 auto; padding: 40px 16px 64px; }
-  nav { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 40px; }
-  nav a { color: #fff; }
-  nav .here { color: #888; }
-  h1 { font-size: 28px; font-weight: 600; margin: 0 0 24px; }
-  h2 { font-size: 17px; font-weight: 600; margin: 40px 0 8px; }
-  h3 { font-size: 17px; font-weight: 600; margin: 32px 0 4px; }
-  .date { color: #888; font-size: 14px; margin: 0 0 8px; }
+  :root {
+    --bg: #000;
+    --text: #c9c9c9;      /* body copy: soft, easy on the eyes */
+    --strong: #fff;       /* headings, emphasis, links */
+    --muted: #7d7d7d;     /* dates, notes, nav */
+    --line: #262626;
+    --code-bg: #111;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 17px/1.7 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 80px; }
+
+  nav { display: flex; justify-content: space-between; align-items: center;
+        font-size: 14px; color: var(--muted); padding-bottom: 16px;
+        border-bottom: 1px solid var(--line); margin-bottom: 56px; }
+  nav a { color: var(--strong); text-decoration: none; }
+  nav a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  nav .here { color: var(--muted); }
+
+  h1 { color: var(--strong); font-size: 40px; line-height: 1.1; font-weight: 700;
+       letter-spacing: -0.02em; margin: 0 0 20px; }
+  .lead { color: var(--strong); font-size: 21px; line-height: 1.55; margin: 0 0 16px; }
+
+  section { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 32px; }
+  h2 { color: var(--strong); font-size: 13px; font-weight: 600; letter-spacing: 0.08em;
+       text-transform: uppercase; margin: 0 0 16px; }
+  h3 { color: var(--strong); font-size: 19px; font-weight: 600; margin: 0 0 2px; }
+
   p { margin: 0 0 16px; }
+  strong { color: var(--strong); font-weight: 600; }
+  a { color: var(--strong); text-underline-offset: 3px; text-decoration-color: var(--muted); }
+  a:hover { text-decoration-color: var(--strong); }
+  .note { color: var(--muted); font-size: 15px; }
+
+  .cmd { display: flex; align-items: center; gap: 12px; background: var(--code-bg);
+         border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 12px 16px; margin: 0 0 16px; }
+  .cmd pre { flex: 1; min-width: 0; margin: 0; color: var(--strong);
+             white-space: pre-wrap; word-break: break-all;
+             font: 14px/1.5 ui-monospace, Menlo, monospace; }
+  code { color: var(--strong); font: 15px ui-monospace, Menlo, monospace; }
+  button { flex: none; background: var(--strong); color: var(--bg); border: 0; border-radius: 6px;
+           padding: 6px 12px; font: 600 14px/1 -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
+  button:hover { background: var(--text); }
+
   ul { margin: 0 0 16px; padding-left: 20px; }
-  li { margin: 0 0 6px; }
-  pre { margin: 0 0 16px; padding: 12px 0; overflow-x: auto;
-        font: 14px/1.5 ui-monospace, Menlo, monospace; }
-  code { font: 14px ui-monospace, Menlo, monospace; }
-  button { background: none; color: #fff; border: 1px solid #fff; border-radius: 6px;
-           padding: 4px 10px; font: inherit; font-size: 14px; cursor: pointer; }
-  a { color: #fff; }
+  li { margin: 0 0 8px; padding-left: 4px; }
+  li::marker { color: var(--muted); }
+
+  .release { padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .release:last-of-type { border-bottom: 0; }
+  .release ul { margin: 12px 0 0; }
+  .date { color: var(--muted); font-size: 14px; margin: 0; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 32px; }
+    .lead { font-size: 19px; }
+    .cmd { flex-direction: column; align-items: stretch; }
+    button { align-self: flex-start; }
+  }
 </style>
 </head>
 <body>
 <main>
   <nav><span><span class="here">Said</span> · <a href="releases.html">What's new</a></span><span><a href="pl/" lang="pl">Polski</a></span></nav>
   <h1>Said</h1>
-  <p>Said records what you say on your Mac and turns it into text. Click the icon at the top of the screen, talk, click stop. A moment later you have the recording and a transcript.</p>
-  <p>Nothing goes to the internet. Your recordings stay on your computer.</p>
+  <p class="lead">Said records what you say on your Mac and turns it into text. Click the icon at the top of the screen, talk, click stop. A moment later you have the recording and a transcript.</p>
+  <p class="note">Nothing goes to the internet. Your recordings stay on your computer.</p>
 
+  <section>
   <h2>Install</h2>
   <p>Open Terminal, paste this line and press Return:</p>
-  <pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre>
-  <p><button id="copy" type="button">Copy</button></p>
+  <div class="cmd"><pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre><button id="copy" type="button">Copy</button></div>
   <p>It takes a few minutes the first time. You need macOS 14 or newer. If your Mac asks to install Apple's developer tools, say yes and run the command again. To update later, run the same command.</p>
-
+  </section>
+  <section>
   <h2>Using it</h2>
   <p><strong>Recording a thought.</strong> Click the Said icon in the menu bar and choose Record. A small black pill appears at the bottom of the screen with a timer and a stop button. Keep working; you can drag the pill wherever you like.</p>
   <p><strong>Recording a call.</strong> When you join a call in Zoom, Teams or Google Meet, Said asks if you want to record it. It records you and the other people, even on headphones, and stops when the call ends.</p>
   <p><strong>Finding your recordings.</strong> Each one gets its own folder in Music/Said, with the audio and a text file of everything that was said.</p>
   <p><strong>If you forget to stop.</strong> After 2 minutes of silence you get a notification with a stop button. If your disk is getting full, Said warns you and saves the recording in time.</p>
-
+  </section>
+  <section>
   <h2>Your privacy</h2>
   <p>Recordings stay on your Mac. There's no cloud, no account and no tracking. Recording starts only when you click, and only you can open your recordings folder.</p>
   <p>The internet is used once, to download the speech-recognition model (about 630 MB) when you click the button in the menu. After that Said works offline.</p>
-
+  </section>
+  <section>
   <h2>How it works</h2>
   <p>Said turns speech into text with Whisper, an openly available speech-recognition model. It runs on your Mac's own chip, the way your Mac edits photos without a server. Ten seconds of audio takes about a second and a half. It understands Polish, English and many other languages, and works out which one you're speaking by itself.</p>
   <p>To notice that a call has started, Said only checks which app is using the microphone. It doesn't look at your screen, windows or browser tabs.</p>
-
+  </section>
+  <section>
   <h2>What's new</h2>
+  <div class="release">
   <h3>Said 0.4.1</h3>
   <p class="date">18 November 2026</p>
   <ul>
@@ -65,15 +112,20 @@
     <li>Your recordings folder is now private to you. Other people using this Mac can't open it.</li>
     <li>The installer notices if a release was tampered with after you installed it, and stops.</li>
   </ul>
+  </div>
+  <div class="release">
   <h3>Said 0.4.0</h3>
   <p class="date">18 November 2026</p>
   <ul>
     <li>Said speaks English, and Polish for Polish systems. It follows your Mac's language.</li>
   </ul>
+  </div>
   <p><a href="releases.html">All versions</a></p>
-
+  </section>
+  <section>
   <h2>Code</h2>
   <p>Said is free and open source (MIT license): <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
+  </section>
 </main>
 <script>
   document.getElementById('copy').addEventListener('click', async (e) => {

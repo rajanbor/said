@@ -7,55 +7,102 @@
 <meta name="description" content="Nagrywasz głos na Macu, dostajesz tekst. Wszystko zostaje u Ciebie.">
 <link rel="icon" href="../icon.png">
 <style>
-  body { margin: 0; background: #000; color: #fff;
-         font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
-  main { max-width: 620px; margin: 0 auto; padding: 40px 16px 64px; }
-  nav { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 40px; }
-  nav a { color: #fff; }
-  nav .here { color: #888; }
-  h1 { font-size: 28px; font-weight: 600; margin: 0 0 24px; }
-  h2 { font-size: 17px; font-weight: 600; margin: 40px 0 8px; }
-  h3 { font-size: 17px; font-weight: 600; margin: 32px 0 4px; }
-  .date { color: #888; font-size: 14px; margin: 0 0 8px; }
+  :root {
+    --bg: #000;
+    --text: #c9c9c9;      /* body copy: soft, easy on the eyes */
+    --strong: #fff;       /* headings, emphasis, links */
+    --muted: #7d7d7d;     /* dates, notes, nav */
+    --line: #262626;
+    --code-bg: #111;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 17px/1.7 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 80px; }
+
+  nav { display: flex; justify-content: space-between; align-items: center;
+        font-size: 14px; color: var(--muted); padding-bottom: 16px;
+        border-bottom: 1px solid var(--line); margin-bottom: 56px; }
+  nav a { color: var(--strong); text-decoration: none; }
+  nav a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  nav .here { color: var(--muted); }
+
+  h1 { color: var(--strong); font-size: 40px; line-height: 1.1; font-weight: 700;
+       letter-spacing: -0.02em; margin: 0 0 20px; }
+  .lead { color: var(--strong); font-size: 21px; line-height: 1.55; margin: 0 0 16px; }
+
+  section { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 32px; }
+  h2 { color: var(--strong); font-size: 13px; font-weight: 600; letter-spacing: 0.08em;
+       text-transform: uppercase; margin: 0 0 16px; }
+  h3 { color: var(--strong); font-size: 19px; font-weight: 600; margin: 0 0 2px; }
+
   p { margin: 0 0 16px; }
+  strong { color: var(--strong); font-weight: 600; }
+  a { color: var(--strong); text-underline-offset: 3px; text-decoration-color: var(--muted); }
+  a:hover { text-decoration-color: var(--strong); }
+  .note { color: var(--muted); font-size: 15px; }
+
+  .cmd { display: flex; align-items: center; gap: 12px; background: var(--code-bg);
+         border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 12px 16px; margin: 0 0 16px; }
+  .cmd pre { flex: 1; min-width: 0; margin: 0; color: var(--strong);
+             white-space: pre-wrap; word-break: break-all;
+             font: 14px/1.5 ui-monospace, Menlo, monospace; }
+  code { color: var(--strong); font: 15px ui-monospace, Menlo, monospace; }
+  button { flex: none; background: var(--strong); color: var(--bg); border: 0; border-radius: 6px;
+           padding: 6px 12px; font: 600 14px/1 -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
+  button:hover { background: var(--text); }
+
   ul { margin: 0 0 16px; padding-left: 20px; }
-  li { margin: 0 0 6px; }
-  pre { margin: 0 0 16px; padding: 12px 0; overflow-x: auto;
-        font: 14px/1.5 ui-monospace, Menlo, monospace; }
-  code { font: 14px ui-monospace, Menlo, monospace; }
-  button { background: none; color: #fff; border: 1px solid #fff; border-radius: 6px;
-           padding: 4px 10px; font: inherit; font-size: 14px; cursor: pointer; }
-  a { color: #fff; }
+  li { margin: 0 0 8px; padding-left: 4px; }
+  li::marker { color: var(--muted); }
+
+  .release { padding: 24px 0; border-bottom: 1px solid var(--line); }
+  .release:last-of-type { border-bottom: 0; }
+  .release ul { margin: 12px 0 0; }
+  .date { color: var(--muted); font-size: 14px; margin: 0; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 32px; }
+    .lead { font-size: 19px; }
+    .cmd { flex-direction: column; align-items: stretch; }
+    button { align-self: flex-start; }
+  }
 </style>
 </head>
 <body>
 <main>
   <nav><span><span class="here">Said</span> · <a href="releases.html">Co nowego</a></span><span><a href="../" lang="en">English</a></span></nav>
   <h1>Said</h1>
-  <p>Said nagrywa to, co mówisz na Macu, i zamienia to na tekst. Klikasz ikonę na górze ekranu, mówisz, klikasz stop. Po chwili masz nagranie i jego zapis.</p>
-  <p>Nic nie trafia do internetu. Nagrania zostają na Twoim komputerze.</p>
+  <p class="lead">Said nagrywa to, co mówisz na Macu, i zamienia to na tekst. Klikasz ikonę na górze ekranu, mówisz, klikasz stop. Po chwili masz nagranie i jego zapis.</p>
+  <p class="note">Nic nie trafia do internetu. Nagrania zostają na Twoim komputerze.</p>
 
+  <section>
   <h2>Instalacja</h2>
   <p>Otwórz Terminal, wklej tę linijkę i naciśnij Enter:</p>
-  <pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre>
-  <p><button id="copy" type="button">Kopiuj</button></p>
+  <div class="cmd"><pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre><button id="copy" type="button">Kopiuj</button></div>
   <p>Za pierwszym razem trwa to kilka minut. Potrzebujesz macOS 14 albo nowszego. Jeśli Mac poprosi o doinstalowanie narzędzi Apple, zgódź się i uruchom komendę jeszcze raz. Tą samą komendą później aktualizujesz.</p>
-
+  </section>
+  <section>
   <h2>Jak tego używać</h2>
   <p><strong>Nagranie myśli.</strong> Kliknij ikonę Said na górnym pasku i wybierz Nagraj. Na dole ekranu pojawi się mała czarna pastylka z czasem i przyciskiem stop. Pracuj dalej; pastylkę możesz przesunąć, gdzie chcesz.</p>
   <p><strong>Nagranie rozmowy.</strong> Gdy dołączasz do rozmowy w Zoomie, Teams albo Google Meet, Said pyta, czy ją nagrać. Nagrywa Ciebie i pozostałe osoby, nawet na słuchawkach, a po zakończeniu rozmowy sam przestaje.</p>
   <p><strong>Gdzie są nagrania.</strong> Każde ma swój folder w Muzyka/Said, z dźwiękiem i plikiem tekstowym ze wszystkim, co zostało powiedziane.</p>
   <p><strong>Jeśli zapomnisz zatrzymać.</strong> Po 2 minutach ciszy dostajesz powiadomienie z przyciskiem stop. Gdy kończy się miejsce na dysku, Said ostrzega i zapisuje nagranie na czas.</p>
-
+  </section>
+  <section>
   <h2>Prywatność</h2>
   <p>Nagrania zostają na Twoim Macu. Nie ma chmury, konta ani śledzenia. Nagrywanie zaczyna się tylko po Twoim kliknięciu, a folder z nagraniami możesz otworzyć tylko Ty.</p>
   <p>Z internetu Said korzysta raz: żeby pobrać model rozpoznawania mowy (około 630 MB), gdy klikniesz przycisk w menu. Potem działa offline.</p>
-
+  </section>
+  <section>
   <h2>Jak to działa</h2>
   <p>Mowę na tekst zamienia Whisper, otwarty model rozpoznawania mowy. Działa na chipie Twojego Maca, tak jak Mac obrabia zdjęcia bez żadnego serwera. Dziesięć sekund nagrania zajmuje mu około półtorej sekundy. Rozumie polski, angielski i wiele innych języków, i sam rozpoznaje, w którym mówisz.</p>
   <p>Żeby zauważyć, że zaczęła się rozmowa, Said sprawdza tylko, który program używa mikrofonu. Nie patrzy na ekran, okna ani karty przeglądarki.</p>
-
+  </section>
+  <section>
   <h2>Co nowego</h2>
+  <div class="release">
   <h3>Said 0.4.1</h3>
   <p class="date">18 listopada 2026</p>
   <ul>
@@ -65,15 +112,20 @@
     <li>Folder z nagraniami jest teraz tylko Twój. Inni użytkownicy tego Maca go nie otworzą.</li>
     <li>Instalator zauważy, jeśli ktoś podmienił wydanie po Twojej instalacji, i się zatrzyma.</li>
   </ul>
+  </div>
+  <div class="release">
   <h3>Said 0.4.0</h3>
   <p class="date">18 listopada 2026</p>
   <ul>
     <li>Said mówi po angielsku, a na polskim systemie po polsku. Dopasowuje się do języka Maca.</li>
   </ul>
+  </div>
   <p><a href="releases.html">Wszystkie wersje</a></p>
-
+  </section>
+  <section>
   <h2>Kod</h2>
   <p>Said jest darmowy i otwarty (licencja MIT): <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
+  </section>
 </main>
 <script>
   document.getElementById('copy').addEventListener('click', async (e) => {
