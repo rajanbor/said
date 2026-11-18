@@ -6,6 +6,7 @@ struct Recording: Codable, Equatable {
     let path: String
     let duration: TimeInterval
     let date: Date
+    var transcriptPath: String?
 
     var url: URL { URL(fileURLWithPath: path) }
     var sizeText: String {
@@ -23,6 +24,8 @@ final class Recorder: ObservableObject {
     @Published private(set) var levels: [Float] = Array(repeating: 0, count: Recorder.barCount)
     @Published private(set) var last: Recording?
     @Published var error: String?
+
+    let transcriber = Transcriber()
 
     static let barCount = 18
     private static let lastKey = "lastRecording"
@@ -76,6 +79,22 @@ final class Recorder: ObservableObject {
         pill.hide()
 
         let rec = Recording(path: recorder.url.path, duration: duration, date: Date())
+        save(rec)
+        if transcriber.isInstalled { transcribeLast() }
+    }
+
+    /// Runs local transcription for the last recording (automatic when the model is installed).
+    func transcribeLast() {
+        guard let rec = last else { return }
+        Task {
+            guard let url = await transcriber.transcribe(rec) else { return }
+            var updated = rec
+            updated.transcriptPath = url.path
+            if last?.path == rec.path { save(updated) }
+        }
+    }
+
+    private func save(_ rec: Recording) {
         last = rec
         if let data = try? JSONEncoder().encode(rec) {
             UserDefaults.standard.set(data, forKey: Self.lastKey)
@@ -134,6 +153,11 @@ final class Recorder: ObservableObject {
     func revealLast() {
         guard let last else { return }
         NSWorkspace.shared.activateFileViewerSelecting([last.url])
+    }
+
+    func openTranscript() {
+        guard let path = last?.transcriptPath else { return }
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
     }
 
     func copyLastPath() {

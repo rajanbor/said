@@ -8,6 +8,7 @@ struct SaidApp: App {
         MenuBarExtra {
             MenuView()
                 .environmentObject(recorder)
+                .environmentObject(recorder.transcriber)
         } label: {
             if recorder.isRecording {
                 HStack(spacing: 4) {
