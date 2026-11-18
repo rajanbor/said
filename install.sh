@@ -12,11 +12,18 @@ REPO="${SAID_REPO:-https://github.com/rajanbor/said.git}"
 SRC="${SAID_SRC:-$HOME/.said/src}"
 # Installs the newest release tag (vX.Y.Z). Set SAID_VERSION=main for the latest code, or e.g. v0.1.0.
 REF="${SAID_VERSION:-}"
+# Optional: which model writes summaries (bielik | qwen3-4b | qwen3-1.7b | off). Only preselects it;
+# the model is downloaded when you click the button in the menu.
+SUMMARY="${SAID_SUMMARY:-}"
 
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 fail() { printf '\033[31mError:\033[0m %s\n' "$*" >&2; exit 1; }
 
 [[ "$(uname -s)" == "Darwin" ]] || fail "Said only runs on macOS."
+case "$SUMMARY" in
+  ""|bielik|qwen3-4b|qwen3-1.7b|off) ;;
+  *) fail "SAID_SUMMARY must be bielik, qwen3-4b, qwen3-1.7b or off (got: $SUMMARY)." ;;
+esac
 major="$(sw_vers -productVersion | cut -d. -f1)"
 (( major >= 14 )) || fail "Said needs macOS 14 or newer (you have $(sw_vers -productVersion))."
 
@@ -78,5 +85,6 @@ chmod -R u+rwX,go+rX,go-w "$DEST/Said.app"   # the app is for every user; record
 
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$DEST/Said.app/Contents/Info.plist")"
 say "Installed Said $VERSION: $DEST/Said.app"
+[[ -z "$SUMMARY" ]] || defaults write io.github.rajanbor.said summaryModel "$SUMMARY"
 open "$DEST/Said.app"
 say "Said is running. Look for its icon in the menu bar (top right)."

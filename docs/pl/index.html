@@ -88,16 +88,28 @@
   <p><strong>Nagranie myśli.</strong> Kliknij ikonę Said na górnym pasku i wybierz Nagraj. Na dole ekranu pojawi się mała czarna pastylka z czasem i przyciskiem stop. Pracuj dalej; pastylkę możesz przesunąć, gdzie chcesz.</p>
   <p><strong>Nagranie rozmowy.</strong> Gdy dołączasz do rozmowy w Zoomie, Teams albo Google Meet, Said pyta, czy ją nagrać. Nagrywa Ciebie i pozostałe osoby, nawet na słuchawkach, a po zakończeniu rozmowy sam przestaje.</p>
   <p><strong>Gdzie są nagrania.</strong> Każde ma swój folder w Muzyka/Said, z dźwiękiem i plikiem tekstowym ze wszystkim, co zostało powiedziane.</p>
+  <p><strong>Podsumowania.</strong> Said może też dopisać na początku każdego zapisu krótkie podsumowanie: o czym była rozmowa, najważniejsze punkty, decyzje i kto co ma zrobić. W menu, w części Podsumowania, wybierz model i kliknij Pobierz model podsumowań. Od tej pory każdy zapis dostaje podsumowanie sam. Powstaje na Twoim Macu, tak jak zapis.</p>
   <p><strong>Jeśli zapomnisz zatrzymać.</strong> Po 2 minutach ciszy dostajesz powiadomienie z przyciskiem stop. Gdy kończy się miejsce na dysku, Said ostrzega i zapisuje nagranie na czas.</p>
+  </section>
+  <section>
+  <h2>Który model do podsumowań</h2>
+  <p>Wybierz ten, który pasuje do tego, jak mówisz. Możesz go zmienić w każdej chwili.</p>
+  <ul>
+  <li><strong>Mówisz głównie po polsku:</strong> Bielik 4.5B. To model zrobiony z myślą o polskim, przez SpeakLeash. 2,9 GB.</li>
+  <li><strong>Mieszasz polski z angielskim albo mówisz głównie po angielsku:</strong> Qwen3 4B. 2,5 GB.</li>
+  <li><strong>Chcesz oszczędnie</strong> (starszy Mac, mało miejsca): Qwen3 1.7B. Szybszy i lżejszy, ale podsumowania są krótsze i mniej dokładne. 1,1 GB.</li>
+  </ul>
+  <p>Podsumowanie powstaje w języku nagrania. Model możesz też wybrać już przy instalacji: dopisz <code>SAID_SUMMARY=bielik</code> przed <code>bash</code> w komendzie instalacji (albo <code>qwen3-4b</code>, <code>qwen3-1.7b</code>). Sam model i tak pobiera się dopiero po kliknięciu w menu.</p>
   </section>
   <section>
   <h2>Prywatność</h2>
   <p>Nagrania zostają na Twoim Macu. Nie ma chmury, konta ani śledzenia. Nagrywanie zaczyna się tylko po Twoim kliknięciu, a folder z nagraniami możesz otworzyć tylko Ty.</p>
-  <p>Z internetu Said korzysta raz: żeby pobrać model rozpoznawania mowy (około 630 MB), gdy klikniesz przycisk w menu. Potem działa offline.</p>
+  <p>Z internetu Said korzysta tylko po modele: model rozpoznawania mowy (około 630 MB) i, jeśli chcesz podsumowań, model podsumowań. Każdy pobiera się dopiero, gdy klikniesz jego przycisk w menu. Potem Said działa offline.</p>
   </section>
   <section>
   <h2>Jak to działa</h2>
   <p>Mowę na tekst zamienia Whisper, otwarty model rozpoznawania mowy. Działa na chipie Twojego Maca, tak jak Mac obrabia zdjęcia bez żadnego serwera. Dziesięć sekund nagrania zajmuje mu około półtorej sekundy. Rozumie polski, angielski i wiele innych języków, i sam rozpoznaje, w którym mówisz.</p>
+  <p>Podsumowania pisze mały, otwarty model językowy (Bielik albo Qwen), uruchomiony na Twoim Macu przez llama.cpp. Nic nie jest nigdzie wysyłane.</p>
   <p>Żeby zauważyć, że zaczęła się rozmowa, Said sprawdza tylko, który program używa mikrofonu. Nie patrzy na ekran, okna ani karty przeglądarki.</p>
   </section>
   <section>

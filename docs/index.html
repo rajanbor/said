@@ -88,16 +88,28 @@
   <p><strong>Recording a thought.</strong> Click the Said icon in the menu bar and choose Record. A small black pill appears at the bottom of the screen with a timer and a stop button. Keep working; you can drag the pill wherever you like.</p>
   <p><strong>Recording a call.</strong> When you join a call in Zoom, Teams or Google Meet, Said asks if you want to record it. It records you and the other people, even on headphones, and stops when the call ends.</p>
   <p><strong>Finding your recordings.</strong> Each one gets its own folder in Music/Said, with the audio and a text file of everything that was said.</p>
+  <p><strong>Summaries.</strong> Said can also put a short summary at the top of each transcript: what it was about, the key points, decisions, and who does what next. In the menu, under Summaries, pick a model and click Download summary model. From then on every transcript gets a summary by itself. It's written on your Mac, like the transcript.</p>
   <p><strong>If you forget to stop.</strong> After 2 minutes of silence you get a notification with a stop button. If your disk is getting full, Said warns you and saves the recording in time.</p>
+  </section>
+  <section>
+  <h2>Which summary model</h2>
+  <p>Pick the one that matches how you talk. You can change it any time.</p>
+  <ul>
+  <li><strong>You mostly speak Polish:</strong> Bielik 4.5B, made for Polish by SpeakLeash. 2.9 GB.</li>
+  <li><strong>You mix Polish and English, or mostly speak English:</strong> Qwen3 4B. 2.5 GB.</li>
+  <li><strong>You want it light</strong> (older Mac, little disk space): Qwen3 1.7B. Quicker and smaller, but its summaries are shorter and less precise. 1.1 GB.</li>
+  </ul>
+  <p>The summary is written in the language of the recording. You can also choose the model when you install: put <code>SAID_SUMMARY=bielik</code> before <code>bash</code> in the install command (or <code>qwen3-4b</code>, <code>qwen3-1.7b</code>). The model itself is still downloaded only when you click the button in the menu.</p>
   </section>
   <section>
   <h2>Your privacy</h2>
   <p>Recordings stay on your Mac. There's no cloud, no account and no tracking. Recording starts only when you click, and only you can open your recordings folder.</p>
-  <p>The internet is used once, to download the speech-recognition model (about 630 MB) when you click the button in the menu. After that Said works offline.</p>
+  <p>The internet is used only for models: the speech-recognition model (about 630 MB) and, if you want summaries, a summary model. Each is downloaded only when you click its button in the menu. After that Said works offline.</p>
   </section>
   <section>
   <h2>How it works</h2>
   <p>Said turns speech into text with Whisper, an openly available speech-recognition model. It runs on your Mac's own chip, the way your Mac edits photos without a server. Ten seconds of audio takes about a second and a half. It understands Polish, English and many other languages, and works out which one you're speaking by itself.</p>
+  <p>Summaries are written by a small open language model (Bielik or Qwen) running on your Mac with llama.cpp. Nothing is sent anywhere.</p>
   <p>To notice that a call has started, Said only checks which app is using the microphone. It doesn't look at your screen, windows or browser tabs.</p>
   </section>
   <section>

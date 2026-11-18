@@ -7,13 +7,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Said"
+# --disable-keychain: the prebuilt llama.cpp download is public; don't ask the keychain for GitHub logins.
+swift build -c release --disable-keychain
+BIN_DIR="$(swift build -c release --disable-keychain --show-bin-path)"
+BIN="$BIN_DIR/Said"
 APP="build/Said.app"
 
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN" "$APP/Contents/MacOS/Said"
+cp -R "$BIN_DIR/llama.framework" "$APP/Contents/Frameworks/"   # local summaries (llama.cpp)
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp -R Resources/*.lproj "$APP/Contents/Resources/"   # translations (en, pl)
@@ -80,6 +83,7 @@ sign_stable() {
   migrate_password
   chmod 700 "$SIGN_DIR"; chmod 600 "$KC" "$PW_FILE"
   security unlock-keychain -p "$(cat "$PW_FILE")" "$KC"
+  codesign --force --keychain "$KC" --sign "$ID_NAME" "$APP/Contents/Frameworks/llama.framework"
   codesign --force --keychain "$KC" --sign "$ID_NAME" "$APP"
 }
 
@@ -87,6 +91,7 @@ if sign_stable >/dev/null 2>&1; then
   echo "Signed with $ID_NAME"
 else
   echo "warning: stable signing failed, falling back to ad-hoc (macOS may ask for the microphone again)" >&2
+  codesign --force --sign - "$APP/Contents/Frameworks/llama.framework" >/dev/null
   codesign --force --sign - "$APP" >/dev/null
 fi
 

@@ -9,6 +9,8 @@ struct Recording: Codable, Equatable {
     var transcriptPath: String?
     /// Meeting app the recording was started for (e.g. "Zoom"), if any.
     var source: String? = nil
+    /// The transcript has a summary at the top.
+    var summarized: Bool? = nil
 
     var url: URL { URL(fileURLWithPath: path) }
     var sizeText: String {
@@ -44,6 +46,7 @@ final class Recorder: ObservableObject {
     @Published private(set) var promptIsExternal = false
 
     let transcriber = Transcriber()
+    let summarizer = Summarizer()
     let meetings = MeetingDetector()
 
     static let barCount = 18
@@ -266,7 +269,22 @@ final class Recorder: ObservableObject {
             var updated = rec
             updated.transcriptPath = url.path
             if last?.path == rec.path { save(updated) }
+            if summarizer.isReady { await summarize(updated) }
         }
+    }
+
+    /// Writes the summary into the last recording's transcript (automatic when a summary model is installed).
+    func summarizeLast() {
+        guard let rec = last else { return }
+        Task { await summarize(rec) }
+    }
+
+    private func summarize(_ rec: Recording) async {
+        guard let path = rec.transcriptPath,
+              await summarizer.summarize(transcriptAt: URL(fileURLWithPath: path)) else { return }
+        var updated = rec
+        updated.summarized = true
+        if last?.path == rec.path { save(updated) }
     }
 
     private func save(_ rec: Recording) {

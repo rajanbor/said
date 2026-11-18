@@ -23,6 +23,7 @@ Please report security issues privately through GitHub's
 **Nothing leaves your Mac.**
 - Transcription runs locally on the Neural Engine and GPU.
 - The model is downloaded once, when you click the button. After that it loads with downloads switched off.
+- Summaries also run locally (llama.cpp on the GPU). The summary model is downloaded only when you click its button, and its SHA-256 hash must match the one in the code, or it isn't used.
 - Said has no analytics, no accounts and no server.
 
 **Recordings are private to your user account.**

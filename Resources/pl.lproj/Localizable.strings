@@ -54,3 +54,29 @@
 "Couldn't find %@ audio. Recording the microphone only." = "Nie znaleziono dźwięku aplikacji %@. Nagrywam tylko mikrofon.";
 "Start recording?" = "Rozpocząć nagrywanie?";
 "Requested by another app" = "Prośba z innej aplikacji";
+
+/* Summaries */
+"Summaries" = "Podsumowania";
+"Off" = "Wyłączone";
+"Mostly Polish" = "Głównie po polsku";
+"Mixed or mostly English" = "Mieszane lub głównie po angielsku";
+"Light and quick" = "Lekki i szybki";
+"Download summary model" = "Pobierz model podsumowań";
+"Cancel" = "Anuluj";
+"Checking the download…" = "Sprawdzanie pobranego pliku…";
+"The downloaded model is damaged or changed. Try again." = "Pobrany model jest uszkodzony lub zmieniony. Spróbuj ponownie.";
+"Couldn't write the summary: %@" = "Nie udało się napisać podsumowania: %@";
+"Writing summary…" = "Piszę podsumowanie…";
+"part %d of %d" = "część %d z %d";
+"Summarize" = "Podsumuj";
+"Summary" = "Podsumowanie";
+"Key points" = "Najważniejsze";
+"Decisions" = "Decyzje";
+"Action items" = "Do zrobienia";
+"the model file couldn't be loaded" = "nie udało się wczytać pliku modelu";
+"not enough memory for the model" = "za mało pamięci na model";
+"the text couldn't be tokenized" = "nie udało się przetworzyć tekstu";
+"the model stopped with an error" = "model zatrzymał się z błędem";
+"invalid output grammar" = "błędna gramatyka odpowiedzi";
+"the text is too long for the model" = "tekst jest za długi dla modelu";
+"the summary didn't come out right, try Summarize again" = "podsumowanie wyszło niepełne, kliknij Podsumuj jeszcze raz";

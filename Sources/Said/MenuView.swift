@@ -5,6 +5,7 @@ import SwiftUI
 struct MenuView: View {
     @EnvironmentObject var recorder: Recorder
     @EnvironmentObject var transcriber: Transcriber
+    @EnvironmentObject var summarizer: Summarizer
 
     static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
 
@@ -34,6 +35,7 @@ struct MenuView: View {
             MeetingToggle(detector: recorder.meetings)
             ToggleRow(L("Record system audio"), isOn: $recorder.recordSystemAudio)
             modelStatus
+            SummarySettings(summarizer: summarizer)
 
             Separator()
             MenuRow(L("Quit Said"), shortcut: "⌘Q") { NSApplication.shared.terminate(nil) }
@@ -87,8 +89,13 @@ struct MenuView: View {
             Hint(text: L("Saving…"), progress: true)
         } else if transcriber.state == .transcribing {
             Hint(text: L("Transcribing…"), progress: true)
+        } else if case .summarizing(let part) = summarizer.state {
+            Hint(text: [L("Writing summary…"), part].compactMap { $0 }.joined(separator: " "), progress: true)
         } else if last.transcriptPath != nil {
             MenuRow(L("Open transcript"), systemImage: "doc.text", action: recorder.openTranscript)
+            if summarizer.isReady, last.summarized != true {
+                MenuRow(L("Summarize"), systemImage: "list.bullet.rectangle", action: recorder.summarizeLast)
+            }
         } else if transcriber.state == .ready {
             MenuRow(L("Transcribe"), systemImage: "text.badge.plus", action: recorder.transcribeLast)
         }
@@ -121,6 +128,62 @@ struct MenuView: View {
                     systemImage: "arrow.clockwise") { Task { await transcriber.installModel() } }
         case .ready, .transcribing:
             EmptyView()
+        }
+    }
+}
+
+/// Settings → Summaries: which local model writes summaries, and its download.
+private struct SummarySettings: View {
+    @ObservedObject var summarizer: Summarizer
+
+    var body: some View {
+        HStack {
+            Text(L("Summaries")).font(.system(size: 13))
+            Spacer(minLength: 8)
+            Menu {
+                Picker("", selection: $summarizer.model) {
+                    Text(L("Off")).tag(SummaryModel?.none)
+                    ForEach(SummaryModel.allCases) { model in
+                        Text("\(model.name) – \(model.hint)").tag(SummaryModel?.some(model))
+                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            } label: {
+                Text(summarizer.model?.name ?? L("Off")).font(.system(size: 12))
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+
+        if let model = summarizer.model {
+            switch summarizer.state {
+            case .downloading(let p):
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(L("Downloading model… %d%%", Int(p * 100))).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Spacer()
+                        Button(L("Cancel"), action: summarizer.cancelDownload)
+                            .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: p).controlSize(.small)
+                }
+                .padding(.horizontal, 9).padding(.vertical, 4)
+            case .verifying:
+                Hint(text: L("Checking the download…"), progress: true)
+            case .failed(let message):
+                Hint(text: message, systemImage: "exclamationmark.circle.fill", tint: .red)
+                if !model.isInstalled {
+                    MenuRow(L("Try again"), systemImage: "arrow.clockwise", action: summarizer.installModel)
+                }
+            case .idle, .summarizing:
+                if !model.isInstalled {
+                    MenuRow(L("Download summary model"), systemImage: "arrow.down.circle",
+                            trailing: model.sizeText, action: summarizer.installModel)
+                }
+            }
         }
     }
 }

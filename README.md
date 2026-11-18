@@ -34,14 +34,36 @@ To update later, run the same command.
 
 **Finding your recordings.** Each recording gets its own folder in `Music/Said`, with the audio and a text file of everything that was said, with timestamps. The menu has a button that opens that folder.
 
+**Summaries.** Said can also put a short summary at the top of each transcript: what it was about, the key points, decisions, and who does what next. In the menu, under **Summaries**, pick a model and click **Download summary model**. From then on every transcript gets a summary by itself. It's written on your Mac, like the transcript.
+
 **If you forget to stop.** After 2 minutes of silence Said sends a notification with a stop button. If your disk is getting full, it warns you and saves the recording before space runs out.
 
 Before you record other people, let them know.
 
+### Which summary model?
+
+Pick the one that matches how you talk. You can change it any time.
+
+| You mostly speak… | Model | Download |
+|---|---|---|
+| **Polish** | **Bielik 4.5B**, made for Polish by SpeakLeash | 2.9 GB |
+| **Polish and English mixed, or mostly English** | **Qwen3 4B** | 2.5 GB |
+| **Anything, and you want it light** (older Mac, little disk space) | **Qwen3 1.7B**: quicker, but shorter and less precise summaries | 1.1 GB |
+
+The summary is written in the language of the recording. A short call takes about ten seconds; long ones are done in parts and take longer.
+
+You can also choose the model when you install, so it's already selected in the menu:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | SAID_SUMMARY=bielik bash
+```
+
+Use `bielik`, `qwen3-4b`, `qwen3-1.7b` or `off`. The model itself is still only downloaded when you click the button.
+
 ## Your privacy
 
 - **Recordings stay on your Mac.** No cloud, no account, no analytics.
-- **The internet is used once:** to download the speech-recognition model (about 630 MB), when you click the button in the menu. After that Said works offline.
+- **The internet is used only for models:** to download the speech-recognition model (about 630 MB) and, if you want summaries, a summary model, each when you click its button in the menu. After that Said works offline.
 - **Nothing records without you.** Recording starts only when you click. Links that try to start a recording from another app only show a question you have to answer.
 - **Only the call is recorded.** For calls, Said captures the meeting app's sound, not your music or notifications. If it can't tell which sound belongs to the call, it records just your microphone.
 - **Only you can open the files.** Other people who use this Mac can't get into your recordings folder.
@@ -51,6 +73,8 @@ More details are in [SECURITY.md](SECURITY.md).
 ## How it works, in short
 
 Said turns speech into text with **Whisper**, an openly available speech-recognition model. It runs on your Mac's own chip, the way your Mac edits photos without a server. Ten seconds of audio takes about a second and a half. Whisper understands Polish, English and many other languages, and works out which one you're speaking by itself.
+
+Summaries are written by a small open language model (Bielik or Qwen) running on your Mac with **llama.cpp**. Nothing is sent anywhere.
 
 To notice that a call has started, Said only checks which app is using the microphone. It doesn't look at your screen, windows or browser tabs.
 
@@ -66,7 +90,7 @@ Your recordings in `Music/Said` stay; delete that folder too if you don't need t
 
 ## Under the hood
 
-Said is a native Swift app (SwiftUI + AppKit). Apart from [WhisperKit](https://github.com/argmaxinc/WhisperKit), it uses only Apple's own frameworks.
+Said is a native Swift app (SwiftUI + AppKit). Apart from [WhisperKit](https://github.com/argmaxinc/WhisperKit) and [llama.cpp](https://github.com/ggml-org/llama.cpp), it uses only Apple's own frameworks.
 
 - **Recording.**
   - The microphone is recorded with `AVAudioRecorder`.
@@ -79,6 +103,12 @@ Said is a native Swift app (SwiftUI + AppKit). Apart from [WhisperKit](https://g
   - The model is downloaded only when you click the button. After that it loads with downloads switched off.
   - The transcript is Markdown with timestamps.
   - Whisper tends to invent text for silence ("Thank you for watching", "Спасибо"). Said measures the loudness under each segment and drops the ones without speech, with a stricter level for those typical phrases. The language is taken from the parts with the most speech.
+- **Summaries.**
+  - llama.cpp comes as the project's own prebuilt `llama.xcframework` (Metal, pinned by checksum in `Package.swift`), so building still needs only the Command Line Tools.
+  - Models are GGUF files (Q4_K_M) from Hugging Face. The download is checked against a SHA-256 hash in the code before it's used.
+  - One setting picks the model: `summaryModel` = `bielik` | `qwen3-4b` | `qwen3-1.7b` | `off` (menu, `SAID_SUMMARY` at install, or `defaults write io.github.rajanbor.said summaryModel bielik`).
+  - The model gets the transcript and must answer in a fixed JSON shape (enforced by a grammar), which Said turns into Markdown. Long recordings are summarized in parts first, then combined.
+  - The model is loaded only while it writes, so it doesn't hold memory the rest of the time.
 - **Permissions.** macOS asks for:
   - the microphone;
   - system audio recording, for calls (this isn't screen recording);
@@ -106,6 +136,8 @@ Sources/Said/
   SystemAudioTap.swift   meeting or system audio (Core Audio process tap)
   AudioMixer.swift       mixes mic + call audio into one .m4a
   Transcriber.swift      WhisperKit: model download, transcription
+  Summarizer.swift       summary models, download, prompts, writing the summary
+  LlamaRunner.swift      llama.cpp: load a GGUF model and generate text
   Notifier.swift         notifications with a Stop button
   Localization.swift     L("…") lookup for translated text
 Resources/               Info.plist, icon, en.lproj, pl.lproj
