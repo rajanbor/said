@@ -17,6 +17,7 @@ cp "$BIN" "$APP/Contents/MacOS/Said"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp -R Resources/*.lproj "$APP/Contents/Resources/"   # translations (en, pl)
+chmod -R u+rwX,go+rX,go-w "$APP"   # even when called with a strict umask
 
 SIGN_DIR="$HOME/.said/signing"
 KC="$SIGN_DIR/said-signing.keychain-db"

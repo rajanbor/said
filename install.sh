@@ -6,6 +6,7 @@
 # Run it again to update. Uninstall: rm -rf /Applications/Said.app ~/.said
 set -euo pipefail
 umask 077   # ~/.said and everything in it is private to you
+mkdir -p "$HOME/.said" && chmod 700 "$HOME/.said"
 
 REPO="${SAID_REPO:-https://github.com/rajanbor/said.git}"
 SRC="${SAID_SRC:-$HOME/.said/src}"
@@ -73,6 +74,7 @@ umask 022   # the app itself is installed with normal permissions
 pkill -x Said >/dev/null 2>&1 || true
 rm -rf "$DEST/Said.app"
 cp -R "$SRC/build/Said.app" "$DEST/Said.app"
+chmod -R u+rwX,go+rX,go-w "$DEST/Said.app"   # the app is for every user; recordings stay private
 
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$DEST/Said.app/Contents/Info.plist")"
 say "Installed Said $VERSION: $DEST/Said.app"
