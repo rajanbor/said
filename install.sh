@@ -14,14 +14,14 @@ REF="${SAID_VERSION:-}"
 say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 fail() { printf '\033[31mError:\033[0m %s\n' "$*" >&2; exit 1; }
 
-[[ "$(uname -s)" == "Darwin" ]] || fail "Said działa tylko na macOS."
+[[ "$(uname -s)" == "Darwin" ]] || fail "Said only runs on macOS."
 major="$(sw_vers -productVersion | cut -d. -f1)"
-(( major >= 14 )) || fail "Wymagany macOS 14 lub nowszy (masz $(sw_vers -productVersion))."
+(( major >= 14 )) || fail "Said needs macOS 14 or newer (you have $(sw_vers -productVersion))."
 
 if ! xcrun --find swift >/dev/null 2>&1 || ! command -v git >/dev/null 2>&1; then
-  say "Brak narzędzi Xcode Command Line Tools — otwieram instalator Apple."
+  say "Xcode Command Line Tools are missing, opening the Apple installer."
   xcode-select --install >/dev/null 2>&1 || true
-  fail "Po zakończeniu instalacji narzędzi uruchom tę komendę ponownie."
+  fail "When the tools are installed, run this command again."
 fi
 
 if [[ -z "$REF" ]]; then
@@ -30,23 +30,23 @@ if [[ -z "$REF" ]]; then
 fi
 
 if [[ ! -d "$SRC/.git" ]]; then
-  say "Pobieram Said ($REF) do $SRC"
+  say "Downloading Said ($REF) to $SRC"
   rm -rf "$SRC"
   mkdir -p "$SRC"
   git -C "$SRC" init --quiet
   git -C "$SRC" remote add origin "$REPO"
 else
-  say "Aktualizuję Said do $REF"
+  say "Updating Said to $REF"
 fi
 git -C "$SRC" fetch --quiet --depth 1 --force origin "$REF"
 git -C "$SRC" reset --quiet --hard FETCH_HEAD
 
-say "Buduję Said (pierwszy raz może potrwać kilka minut)…"
+say "Building Said (the first build can take a few minutes)…"
 LOG="$HOME/.said/build.log"
 mkdir -p "$(dirname "$LOG")"
 if ! ( cd "$SRC" && ./scripts/build-app.sh ) >"$LOG" 2>&1; then
   tail -n 30 "$LOG" >&2
-  fail "Budowanie nie powiodło się. Pełny log: $LOG"
+  fail "Build failed. Full log: $LOG"
 fi
 
 DEST="/Applications"
@@ -58,6 +58,6 @@ rm -rf "$DEST/Said.app"
 cp -R "$SRC/build/Said.app" "$DEST/Said.app"
 
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$DEST/Said.app/Contents/Info.plist")"
-say "Zainstalowano Said $VERSION: $DEST/Said.app"
+say "Installed Said $VERSION: $DEST/Said.app"
 open "$DEST/Said.app"
-say "Said działa — szukaj ikony w pasku menu (prawy górny róg)."
+say "Said is running. Look for its icon in the menu bar (top right)."
