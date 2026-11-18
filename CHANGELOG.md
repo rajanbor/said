@@ -2,6 +2,10 @@
 
 Said follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.3] - 2026-11-18
+
+- Every new recording starts with the pill at the bottom centre of the screen. You can still drag it anywhere while recording, but Said no longer keeps that spot for the next recording.
+
 ## [0.4.2] - 2026-11-18
 
 - **Fix: the pill can be dragged again.** AppKit's "move window by background" doesn't reach SwiftUI content, so dragging the recording pill (and the meeting prompt) did nothing. The pill now moves with a SwiftUI drag gesture; its buttons still work as before, and its new position is saved as soon as you let go.

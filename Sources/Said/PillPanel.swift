@@ -1,13 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Borderless, non-activating floating panel. Shows near the bottom of the screen,
-/// can be dragged anywhere, and remembers where you left it (shared by all pills).
+/// Borderless, non-activating floating panel. Always appears at the bottom centre of
+/// the screen; you can drag it anywhere while it's showing.
 /// It never steals focus from the app you're working in.
 @MainActor
 final class FloatingPanel {
     private let panel: NSPanel
-    private static let centerKey = "pillCenter"
 
     init<Content: View>(size: NSSize, @ViewBuilder content: () -> Content) {
         panel = NSPanel(
@@ -31,7 +30,7 @@ final class FloatingPanel {
     var isVisible: Bool { panel.isVisible }
 
     func show() {
-        let c = savedCenter() ?? defaultCenter()
+        let c = defaultCenter()
         let s = panel.frame.size
         panel.setFrameOrigin(NSPoint(x: c.x - s.width / 2, y: c.y - s.height / 2))
         panel.alphaValue = 0
@@ -39,15 +38,8 @@ final class FloatingPanel {
         NSAnimationContext.runAnimationGroup { $0.duration = 0.2; panel.animator().alphaValue = 1 }
     }
 
-    /// Saves where the pill is, so it comes back to the same spot next time.
-    static func rememberPosition(of window: NSWindow) {
-        let f = window.frame
-        UserDefaults.standard.set([f.midX, f.midY], forKey: centerKey)
-    }
-
     func hide() {
         guard panel.isVisible else { return }
-        Self.rememberPosition(of: panel)
         NSAnimationContext.runAnimationGroup({ $0.duration = 0.2; panel.animator().alphaValue = 0 }) {
             MainActor.assumeIsolated { self.panel.orderOut(nil) }
         }
@@ -57,14 +49,6 @@ final class FloatingPanel {
     private func defaultCenter() -> NSPoint {
         guard let f = NSScreen.main?.visibleFrame else { return .zero }
         return NSPoint(x: f.midX, y: f.minY + 40 + panel.frame.height / 2)
-    }
-
-    /// Last dragged position, if it is still on a connected screen.
-    private func savedCenter() -> NSPoint? {
-        guard let xy = UserDefaults.standard.array(forKey: Self.centerKey) as? [Double], xy.count == 2
-        else { return nil }
-        let p = NSPoint(x: xy[0], y: xy[1])
-        return NSScreen.screens.contains { $0.visibleFrame.contains(p) } ? p : nil
     }
 }
 
@@ -87,12 +71,7 @@ private struct WindowDrag: ViewModifier {
                     window.setFrameOrigin(NSPoint(x: start.origin.x + mouse.x - start.mouse.x,
                                                   y: start.origin.y + mouse.y - start.mouse.y))
                 }
-                .onEnded { _ in
-                    if let window = NSApp.currentEvent?.window {
-                        FloatingPanel.rememberPosition(of: window)
-                    }
-                    start = nil
-                }
+                .onEnded { _ in start = nil }
         )
     }
 }
