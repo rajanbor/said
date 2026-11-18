@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Said</title>
+<meta name="description" content="Nagrywasz głos na Macu, dostajesz tekst. Wszystko zostaje u Ciebie.">
+<link rel="icon" href="../icon.png">
+<link rel="alternate" hreflang="en" href="https://rajanbor.github.io/said/">
+<link rel="alternate" hreflang="pl" href="https://rajanbor.github.io/said/pl/">
+<style>
+  body { margin: 0; background: #000; color: #fff;
+         font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  main { max-width: 620px; margin: 0 auto; padding: 48px 16px 64px; }
+  nav { text-align: right; font-size: 14px; margin-bottom: 24px; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 24px; }
+  h2 { font-size: 17px; font-weight: 600; margin: 40px 0 8px; }
+  p { margin: 0 0 16px; }
+  pre { margin: 0 0 16px; padding: 12px 0; overflow-x: auto;
+        font: 14px/1.5 ui-monospace, Menlo, monospace; }
+  code { font: 14px ui-monospace, Menlo, monospace; }
+  button { background: none; color: #fff; border: 1px solid #fff; border-radius: 6px;
+           padding: 4px 10px; font: inherit; font-size: 14px; cursor: pointer; }
+  a { color: #fff; }
+</style>
+</head>
+<body>
+<main>
+  <nav><a href="../" hreflang="en" lang="en">English</a></nav>
+  <h1>Said</h1>
+  <p>Said to mała aplikacja na Maca do nagrywania głosu. Klikasz ikonę na górnym pasku, mówisz, klikasz stop. Po chwili masz nagranie i jego tekst.</p>
+
+  <p>Nic nie trafia do internetu. Nagranie i tekst zostają na Twoim komputerze.</p>
+
+  <h2>Instalacja</h2>
+  <p>Otwórz Terminal, wklej tę linijkę i naciśnij Enter:</p>
+  <pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre>
+  <p><button id="copy" type="button">Kopiuj</button></p>
+  <p>Instalacja trwa kilka minut. Potrzebujesz macOS 14 albo nowszego. Jeśli Mac poprosi o doinstalowanie narzędzi Apple, zgódź się i uruchom komendę jeszcze raz. Tą samą komendą później aktualizujesz aplikację.</p>
+
+  <h2>Jak tego używać</h2>
+  <p>Said siedzi na górnym pasku obok zegara. W Docku go nie ma. Podczas nagrywania na dole ekranu jest mała czarna pastylka z czasem i przyciskiem stop. Możesz ją przesunąć w dowolne miejsce.</p>
+  <p>Gdy dołączasz do rozmowy w Zoomie, Teams albo Google Meet, Said pyta, czy ją nagrać. Nagrywa Ciebie i pozostałe osoby, a gdy rozmowa się skończy, sam przestaje.</p>
+  <p>Jeśli przez 2 minuty nic nie słychać, dostajesz powiadomienie z przyciskiem stop. Jeśli kończy się miejsce na dysku, Said ostrzega i zapisuje nagranie, zanim miejsca zabraknie.</p>
+  <p>Każde nagranie ma swój folder w <code>Muzyka/Said</code>, z dźwiękiem i plikiem tekstowym.</p>
+
+  <h2>Jak to działa</h2>
+  <p>Mowę na tekst zamienia Whisper, otwarty model rozpoznawania mowy. Said uruchamia go na chipie Twojego Maca (Neural Engine), tak jak Mac obrabia zdjęcia bez żadnego serwera. Dziesięć sekund nagrania zajmuje mu około półtorej sekundy.</p>
+  <p>Model pobierasz raz, około 630 MB, przyciskiem w menu. Tylko wtedy Said korzysta z internetu. Potem działa offline, po polsku, angielsku i w wielu innych językach.</p>
+  <p>Żeby zauważyć, że zaczęła się rozmowa, Said sprawdza tylko, który program używa mikrofonu. Nie czyta okien ani kart przeglądarki.</p>
+
+  <h2>Kod</h2>
+  <p>Said jest darmowy i otwarty (licencja MIT). Kod: <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
+</main>
+<script>
+  document.getElementById('copy').addEventListener('click', async (e) => {
+    try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent); e.target.textContent = 'Skopiowano'; }
+    catch { e.target.textContent = 'Zaznacz i skopiuj'; }
+    setTimeout(() => e.target.textContent = 'Kopiuj', 1800);
+  });
+</script>
+</body>
+</html>

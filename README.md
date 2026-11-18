@@ -1,127 +1,118 @@
 <img src="Resources/AppIcon.png" width="96" alt="">
 
-# said
+# Said
 
-Minimalny, **local-first** rejestrator głosu dla macOS. Żyje w pasku menu, zero internetu, zero chmury.
+A small, **local-first** voice recorder for macOS (the app's interface is in Polish for now). Click the icon in the menu bar, talk, click stop, and get the recording plus a transcript. Nothing is sent to the cloud.
 
-- Ikona w pasku menu (prawy górny róg) — kliknij **Nagraj**.
-- Bez ikony w Docku: Said żyje tylko w pasku menu.
-- Na dole ekranu pojawia się mała czarna pastylka z animacją poziomu głosu, licznikiem czasu i przyciskiem stop. Złap i przenieś ją gdzie chcesz, a Said zapamięta to miejsce. Nie kradnie fokusu.
-- Podczas nagrywania ikona w pasku zmienia się na ● z czasem.
-- Po zakończeniu menu pokazuje tylko podsumowanie: nazwę pliku, czas, rozmiar i **ścieżkę** (Pokaż w Finderze / Kopiuj ścieżkę).
+**Website:** https://rajanbor.github.io/said/ ([Polska wersja](https://rajanbor.github.io/said/pl/))
 
-Każde nagranie ma własny folder z plikiem audio (AAC, mono) i transkrypcją:
+## Install
 
-```
-~/Music/Said/2026-11-18_10-15-00/
-  said_2026-11-18_10-15-00.m4a
-  said_2026-11-18_10-15-00.md
-```
-
-## Instalacja
-
-Wklej do Terminala:
+Paste into Terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash
 ```
 
-Skrypt pobiera kod do `~/.said/src`, buduje aplikację na Twoim Macu i instaluje `Said.app` w `/Applications`. Jeśli nie masz uprawnień do zapisu w `/Applications`, trafia do `~/Applications`. Wymaga macOS 14+ i Xcode Command Line Tools (instalator sam je zaproponuje). Uruchom komendę ponownie, żeby zaktualizować.
+The script downloads the latest release into `~/.said/src`, builds the app on your Mac and installs `Said.app` into `/Applications`. If `/Applications` isn't writable, it uses `~/Applications`. You need macOS 14 or later and the Xcode Command Line Tools; the script offers to install them. Run the same command again to update.
 
-Instalator bierze najnowsze wydanie (tag `vX.Y.Z`). Najnowszy kod z `main` albo konkretna wersja:
+To install the latest code from `main` instead of the newest release:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | SAID_VERSION=main bash
 ```
 
-Odinstalowanie:
+Uninstall:
 
 ```bash
 rm -rf /Applications/Said.app ~/.said "$HOME/Library/Application Support/Said"
 ```
 
-Strona projektu: https://rajanbor.github.io/said/
+## What it does
 
-## Wykrywanie spotkań
+- **Menu bar only.** No Dock icon.
+- **Floating pill.** While you record, a small black pill sits at the bottom of the screen with a live waveform, a timer and a stop button. Drag it anywhere; Said remembers the spot. It never steals focus.
+- **Meeting detection.** When Zoom, Microsoft Teams, Google Meet (in a browser), Webex, FaceTime, Slack, Discord or WhatsApp starts using the microphone, Said offers to record and transcribe. When the call ends, recording stops on its own.
+- **The other side of the call.** Meeting recordings include the meeting app's audio, so the other participants' voices are captured too, even on headphones.
+- **Local transcription.** Polish, English and many other languages, detected automatically.
+- **Silence and disk warnings.** After 2 minutes of silence, Said sends a notification with a **Stop recording** (*Zatrzymaj nagrywanie*) button. It also warns when the disk is getting full and stops safely before it runs out.
+- **One folder per recording:**
 
-Gdy aplikacja do spotkań zaczyna używać mikrofonu (Zoom, Microsoft Teams, Google Meet w Chrome, Arc, Edge, Brave, Firefox albo Safari, Webex, FaceTime, Slack, Discord, WhatsApp), na dole ekranu pojawia się pastylka „Nagrać i przepisać?”. Kliknij **Nagraj**, a gdy rozmowa się skończy i aplikacja zwolni mikrofon, Said sam zatrzyma nagranie i zrobi transkrypcję. Jeśli nic nie klikniesz, propozycja zniknie po 30 sekundach.
+  ```
+  ~/Music/Said/2026-11-18_10-15-00/
+    said_2026-11-18_10-15-00.m4a   audio (mic + call audio mixed)
+    said_2026-11-18_10-15-00.md    transcript with timestamps
+  ```
 
-Said sprawdza to przez Core Audio: widzi tylko, który program używa mikrofonu. Nie czyta okien ani kart przeglądarki i nie potrzebuje dodatkowych uprawnień. Dlatego każde użycie mikrofonu w przeglądarce traktuje jak spotkanie. Wykrywanie można wyłączyć w menu.
+## How it works
 
-### Głosy rozmówców
+Said is a native Swift app (SwiftUI + AppKit). It uses only Apple frameworks plus [WhisperKit](https://github.com/argmaxinc/WhisperKit).
 
-Nagranie spotkania zawiera Twój mikrofon i dźwięk samej aplikacji do spotkań (tylko Zooma, tylko przeglądarki itd., bez muzyki czy powiadomień z innych programów). Oba źródła są miksowane w jeden plik `.m4a`, więc działa to także na słuchawkach. Said używa do tego Core Audio process tap (macOS 14.2+). Przy pierwszym użyciu macOS zapyta o zgodę na **nagrywanie dźwięku systemu**. To osobne uprawnienie, nie nagrywanie ekranu.
+1. **Recording.** The microphone is recorded with `AVAudioRecorder`. For meetings, a Core Audio **process tap** (macOS 14.2+) captures only the meeting app's audio, encoded to AAC on the fly. After you stop, both tracks are mixed into one `.m4a`.
+2. **Meeting detection.** Every 2 seconds Said asks Core Audio which processes are currently using a microphone, and checks their bundle IDs against known meeting apps. It doesn't read window titles or browser tabs, and it needs no extra permission.
+3. **Transcription, on your Mac.** The audio goes through **Whisper large-v3 turbo**, an open speech-recognition model converted to Core ML. It runs on the Apple Neural Engine and GPU of your Mac, with no server involved. On an M-series Mac, 10 seconds of audio takes about 1.5 seconds. The result is saved as Markdown next to the audio.
+4. **The only network access** is downloading that model once (~630 MB from Hugging Face), when you click **Pobierz model transkrypcji** (*Download transcription model*) in the menu. After that the model loads from `~/Library/Application Support/Said/Models` with downloads switched off.
 
-Przy zwykłym nagraniu możesz włączyć w menu **Nagrywaj też dźwięk z komputera**. Wtedy nagrywa się wszystko, co gra Mac.
+### Permissions
 
-## Skróty URL
+macOS asks for:
 
-`said://start`, `said://stop` i `said://toggle` sterują nagrywaniem z dowolnego miejsca: Skrótów, Raycasta, Alfreda albo Terminala (`open said://toggle`).
+- **Microphone**, to record your voice;
+- **System audio recording**, for meeting audio. This is not screen recording;
+- **Notifications**, for the silence and disk warnings.
 
-## Transkrypcja (lokalna)
+Said keeps these permissions across updates. It is signed with a local, self-signed certificate (“Said Local Signing”), kept in its own keychain at `~/.said/signing`; your login keychain isn't touched. With ad-hoc signing, macOS would treat every new build as a different app and ask again.
 
-Po zakończeniu nagrania Said automatycznie robi transkrypcję modelem **Whisper large-v3 turbo** przez [WhisperKit](https://github.com/argmaxinc/WhisperKit) (Core ML / Neural Engine). Język jest wykrywany automatycznie (polski, angielski i inne). Wynik trafia do folderu nagrania jako Markdown ze znacznikami czasu.
+### URL scheme
 
-**Jedyny moment, w którym Said korzysta z internetu**, to jednorazowe pobranie modelu (~630 MB z Hugging Face) po kliknięciu **Pobierz model** w menu. Model ląduje w `~/Library/Application Support/Said/Models`. Potem wczytuje się wyłącznie z dysku, z wyłączonym pobieraniem. Pierwsze wczytanie (kompilacja Core ML) może potrwać kilka minut.
+`said://start`, `said://stop` and `said://toggle` control recording from Shortcuts, Raycast, Alfred or Terminal (`open said://toggle`).
 
-> Wbudowany w macOS `SpeechTranscriber` nie obsługuje (jeszcze) polskiego, dlatego użyty jest Whisper.
-
-## Wymagania
-
-- macOS 14+
-- Xcode / Command Line Tools ze Swift 5.10+
-
-## Budowanie ze źródeł
+## Build from source
 
 ```bash
 ./scripts/build-app.sh --open
 ```
 
-Skrypt buduje `build/Said.app`. Przy pierwszym nagraniu macOS zapyta o dostęp do mikrofonu.
-
-Aplikacja jest podpisywana lokalnym, samopodpisanym certyfikatem „Said Local Signing”. Trzymany jest w osobnym pęku kluczy `~/.said/signing`, więc systemowy pęk kluczy pozostaje nietknięty. Dzięki temu macOS widzi każdą nową wersję jako tę samą aplikację i pamięta dostęp do mikrofonu. Przy podpisie ad-hoc pytałby po każdej aktualizacji.
-Aplikację możesz przenieść do `/Applications`.
-
-## Struktura
-
 ```
 Sources/Said/
-  SaidApp.swift    MenuBarExtra + ikona w pasku
-  MenuView.swift   zawartość menu: nagraj/stop + podsumowanie
-  PillPanel.swift  pastylki: nagrywanie i propozycja spotkania (NSPanel + SwiftUI)
-  Recorder.swift   AVAudioRecorder, metering, ostatnie nagranie
-  Transcriber.swift  WhisperKit: pobranie modelu, transkrypcja → .md
-  MeetingDetector.swift  który program do spotkań używa mikrofonu (Core Audio)
-  SystemAudioTap.swift   dźwięk aplikacji / systemu (Core Audio process tap)
-  AudioMixer.swift       miks mikrofonu i dźwięku systemu w jeden .m4a
-Resources/          Info.plist, AppIcon.icns
-scripts/build-app.sh   buduje build/Said.app
-scripts/make-icon.swift  generuje ikonę
-scripts/release.sh     nowe wydanie (tag + GitHub release)
-install.sh          instalator (curl | bash)
-docs/               strona www (GitHub Pages)
+  SaidApp.swift          menu bar app, URL handling
+  MenuView.swift         menu contents
+  PillPanel.swift        floating pills: recording and meeting prompt
+  Recorder.swift         recording state, files, silence and disk watch
+  MeetingDetector.swift  which meeting app is using the mic (Core Audio)
+  SystemAudioTap.swift   app or system audio (Core Audio process tap)
+  AudioMixer.swift       mixes mic + system audio into one .m4a
+  Transcriber.swift      WhisperKit: model download, transcription to .md
+  Notifier.swift         notifications with a Stop action
+Resources/               Info.plist, AppIcon.icns
+scripts/build-app.sh     builds and signs build/Said.app
+scripts/release.sh       cuts a release (tag + GitHub release)
+scripts/make-icon.swift  renders the app icon
+install.sh               one-line installer
+docs/                    website (GitHub Pages), English + Polish
 ```
 
-## Wersje
+## Versioning
 
-Numeracja według [SemVer](https://semver.org/lang/pl/), historia zmian w [CHANGELOG.md](CHANGELOG.md). Wersja jest widoczna na dole menu aplikacji.
+Said follows [SemVer](https://semver.org/). Changes are listed in [CHANGELOG.md](CHANGELOG.md), and the version is shown at the top of the menu.
 
-Nowe wydanie: dopisz sekcję `## [X.Y.Z] - data` w `CHANGELOG.md`, a potem uruchom:
+To cut a release, add a `## [X.Y.Z] - date` section to `CHANGELOG.md`, then run:
 
 ```bash
 ./scripts/release.sh X.Y.Z
 ```
 
-Skrypt podbija wersję w `Info.plist`, sprawdza, czy aplikacja się buduje, tworzy commit i tag `vX.Y.Z`, wypycha je i tworzy wydanie na GitHubie.
+It bumps the version in `Info.plist`, checks that the app builds, commits, tags `vX.Y.Z`, pushes, and creates the GitHub release.
 
-## Roadmapa (pomysły)
+## Roadmap
 
-- Rozróżnianie mówców (diarization), np. „Ty” vs „Rozmówcy” z osobnych ścieżek
-- Notatka Markdown (np. do Obsidiana) generowana lokalnym LLM (Ollama)
-- Globalny skrót klawiszowy
+- Speaker labels (“You” vs “Others” from the two tracks)
+- Meeting notes (summary, decisions, tasks) from a local LLM (Ollama)
+- Global keyboard shortcut
+- English UI (the app is in Polish for now)
 
-Pamiętaj, by informować rozmówców o nagrywaniu.
+Please let people know when you record them.
 
-## Licencja
+## License
 
 MIT

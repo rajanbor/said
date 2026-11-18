@@ -24,7 +24,7 @@ final class SystemAudioTap {
     /// Latest RMS level of the tapped audio, 0...1.
     var level: Float { levelLock.withLock { $0 } }
 
-    /// Starts writing tapped audio to `url` (CAF, float PCM).
+    /// Starts writing tapped audio to `url` (AAC .m4a).
     func start(scope: Scope, writingTo url: URL) throws {
         let description: CATapDescription
         switch scope {
@@ -59,7 +59,14 @@ final class SystemAudioTap {
         guard let format = AVAudioFormat(streamDescription: &asbd) else {
             throw Self.error("Nieobsługiwany format dźwięku systemowego.")
         }
-        let file = try AVAudioFile(forWriting: url, settings: format.settings,
+        // Encode to AAC on the fly: ~0.7 MB per minute instead of ~23 MB for raw float PCM.
+        let aac: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: asbd.mSampleRate,
+            AVNumberOfChannelsKey: asbd.mChannelsPerFrame,
+            AVEncoderBitRateKey: 96_000,
+        ]
+        let file = try AVAudioFile(forWriting: url, settings: aac,
                                    commonFormat: .pcmFormatFloat32, interleaved: format.isInterleaved)
         self.file = file
 

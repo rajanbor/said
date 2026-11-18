@@ -28,6 +28,8 @@ final class Recorder: ObservableObject {
     @Published private(set) var levels: [Float] = Array(repeating: 0, count: Recorder.barCount)
     @Published private(set) var last: Recording?
     @Published var error: String?
+    /// Warning shown in the menu while recording (long silence, low disk space).
+    @Published private(set) var notice: String?
     /// True while the mic and system audio are being mixed into the final file.
     @Published private(set) var isSaving = false
 
@@ -53,6 +55,23 @@ final class Recorder: ObservableObject {
         let system: URL?    // <stamp>/.system.caf
     }
     private var session: Session?
+
+    // Silence & disk watch
+    private var silenceSince: Date?
+    private var silenceNotified = false
+    private var diskWarned = false
+    private var lastDiskCheck = Date.distantPast
+    /// Below this meter level (≈ -35 dB) counts as silence; room noise sits around -40…-50.
+    private static let silenceLevel: Float = 0.3
+    /// Consecutive loud ticks (20/s) needed to count as sound again, so noise spikes don't reset it.
+    private var loudTicks = 0
+    /// Minutes of silence before suggesting to stop (defaults key "silenceMinutes", default 2).
+    private var silenceLimit: TimeInterval {
+        let m = UserDefaults.standard.double(forKey: "silenceMinutes")
+        return (m > 0 ? m : 2) * 60
+    }
+    private static let lowDisk: Int64 = 2_000_000_000       // warn
+    private static let criticalDisk: Int64 = 500_000_000    // stop (leave room to mix & transcribe)
     private var tap: AnyObject?   // SystemAudioTap (macOS 14.2+)
 
     private var recorder: AVAudioRecorder?
@@ -151,6 +170,8 @@ final class Recorder: ObservableObject {
         self.recorder = nil
         self.session = nil
         isRecording = false
+        notice = nil
+        Notifier.shared.clear(id: "silence")
         pill.hide()
 
         let source = recordingMeeting?.name
@@ -172,7 +193,7 @@ final class Recorder: ObservableObject {
             if let system = s.system { try? fm.removeItem(at: system) }
         }
         if let system = s.system,
-           let size = try? fm.attributesOfItem(atPath: system.path)[.size] as? Int, size > 64 * 1024,
+           let size = try? fm.attributesOfItem(atPath: system.path)[.size] as? Int, size > 16 * 1024,
            await AudioMixer.mix([s.mic, system], into: s.final) {
             return s.final
         }
@@ -199,6 +220,16 @@ final class Recorder: ObservableObject {
     }
 
     private func beginRecording() {
+        if let free = Self.freeSpace(), free < Self.criticalDisk {
+            error = "Za mało miejsca na dysku (\(Self.bytes(free))). Zwolnij miejsce, żeby nagrywać."
+            recordingMeeting = nil
+            return
+        }
+        Notifier.shared.requestPermission()
+        silenceSince = nil
+        silenceNotified = false
+        diskWarned = false
+        notice = nil
         do {
             try FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
             // One folder per recording: <stamp>/said_<stamp>.m4a (+ .md transcript later).
@@ -223,7 +254,7 @@ final class Recorder: ObservableObject {
 
             recorder = r
             session = Session(final: final, mic: url,
-                              system: startSystemAudio(writingTo: dir.appendingPathComponent(".system.caf")))
+                              system: startSystemAudio(writingTo: dir.appendingPathComponent(".system.m4a")))
             elapsed = 0
             levels = Array(repeating: 0, count: Self.barCount)
             isRecording = true
@@ -272,6 +303,60 @@ final class Recorder: ObservableObject {
         if #available(macOS 14.2, *), let tap = tap as? SystemAudioTap { level = max(level, tap.level) }
         levels.removeFirst()
         levels.append(level)
+        watchSilence(level)
+        if Date().timeIntervalSince(lastDiskCheck) > 10 { watchDisk() }
+    }
+
+    /// After a long stretch of silence, suggest stopping (once per silent stretch).
+    private func watchSilence(_ level: Float) {
+        let now = Date()
+        if level >= Self.silenceLevel { loudTicks += 1 } else { loudTicks = 0 }
+        guard loudTicks < 10 else {
+            silenceSince = nil
+            if silenceNotified {
+                silenceNotified = false
+                notice = nil
+                Notifier.shared.clear(id: "silence")
+            }
+            return
+        }
+        let since = silenceSince ?? now
+        silenceSince = since
+        if !silenceNotified, now.timeIntervalSince(since) >= silenceLimit {
+            silenceNotified = true
+            let minutes = Int(silenceLimit / 60)
+            notice = "Cisza od \(minutes) min"
+            Notifier.shared.post(id: "silence", title: "Said nadal nagrywa",
+                                 body: "Od \(minutes) min nic nie słychać. Zatrzymać nagrywanie?")
+        }
+    }
+
+    /// Warn when the disk is getting full; stop before it is.
+    private func watchDisk() {
+        lastDiskCheck = Date()
+        guard let free = Self.freeSpace() else { return }
+        if free < Self.criticalDisk {
+            stop()
+            notice = nil
+            Notifier.shared.post(id: "disk", title: "Nagranie zatrzymane",
+                                 body: "Kończy się miejsce na dysku (zostało \(Self.bytes(free))). Nagranie zostało zapisane.",
+                                 offerStop: false)
+        } else if free < Self.lowDisk, !diskWarned {
+            diskWarned = true
+            notice = "Mało miejsca: \(Self.bytes(free))"
+            Notifier.shared.post(id: "disk", title: "Mało miejsca na dysku",
+                                 body: "Zostało \(Self.bytes(free)). Said zatrzyma nagrywanie przy \(Self.bytes(Self.criticalDisk)).")
+        }
+    }
+
+    private static func freeSpace() -> Int64? {
+        let url = FileManager.default.homeDirectoryForCurrentUser
+        return try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+            .volumeAvailableCapacityForImportantUsage
+    }
+
+    private static func bytes(_ n: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: n, countStyle: .file)
     }
 
     private func denied() {
@@ -296,6 +381,12 @@ final class Recorder: ObservableObject {
     func revealLast() {
         guard let last else { return }
         NSWorkspace.shared.activateFileViewerSelecting([last.url])
+    }
+
+    /// Opens ~/Music/Said (all recordings and transcripts) in Finder.
+    func openFolder() {
+        try? FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(Self.folder)
     }
 
     func openTranscript() {

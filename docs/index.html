@@ -1,15 +1,18 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Said</title>
-<meta name="description" content="Nagrywasz głos na Macu, dostajesz tekst. Wszystko zostaje u Ciebie.">
+<meta name="description" content="Record your voice on a Mac and get the text. Everything stays on your computer.">
 <link rel="icon" href="icon.png">
+<link rel="alternate" hreflang="en" href="https://rajanbor.github.io/said/">
+<link rel="alternate" hreflang="pl" href="https://rajanbor.github.io/said/pl/">
 <style>
   body { margin: 0; background: #000; color: #fff;
          font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
-  main { max-width: 620px; margin: 0 auto; padding: 64px 16px; }
+  main { max-width: 620px; margin: 0 auto; padding: 48px 16px 64px; }
+  nav { text-align: right; font-size: 14px; margin-bottom: 24px; }
   h1 { font-size: 28px; font-weight: 600; margin: 0 0 24px; }
   h2 { font-size: 17px; font-weight: 600; margin: 40px 0 8px; }
   p { margin: 0 0 16px; }
@@ -23,31 +26,37 @@
 </head>
 <body>
 <main>
+  <nav><a href="pl/" hreflang="pl" lang="pl">Polski</a></nav>
   <h1>Said</h1>
+  <p>Said is a small Mac app for recording your voice. Click the icon in the menu bar, talk, click stop. A moment later you have the recording and its text.</p>
 
-  <p>Said to mała aplikacja na Maca do nagrywania głosu. Klikasz ikonę na górnym pasku, mówisz, klikasz stop. Po chwili masz nagranie i jego tekst.</p>
+  <p>Nothing goes to the internet. The recording and the text stay on your computer.</p>
 
-  <p>Nic nie trafia do internetu. Nagranie i tekst zostają na Twoim komputerze.</p>
-
-  <h2>Instalacja</h2>
-  <p>Otwórz Terminal, wklej tę linijkę i naciśnij Enter:</p>
+  <h2>Install</h2>
+  <p>Open Terminal, paste this line and press Return:</p>
   <pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre>
-  <p><button id="copy" type="button">Kopiuj</button></p>
-  <p>Instalacja trwa kilka minut. Potrzebujesz macOS 14 albo nowszego. Jeśli Mac poprosi o doinstalowanie narzędzi Apple, zgódź się i uruchom komendę jeszcze raz. Tą samą komendą później aktualizujesz aplikację.</p>
+  <p><button id="copy" type="button">Copy</button></p>
+  <p>It takes a few minutes. You need macOS 14 or newer. If your Mac asks to install Apple's developer tools, say yes and run the command again. Run the same command later to update.</p>
 
-  <h2>Jak to działa</h2>
-  <p>Po instalacji Said siedzi na górnym pasku obok zegara. W Docku go nie ma. Podczas nagrywania na dole ekranu pojawia się mała czarna pastylka z czasem i przyciskiem stop. Możesz ją przesunąć w dowolne miejsce.</p>
-  <p>Każde nagranie trafia do osobnego folderu w <code>Muzyka/Said</code>, razem z plikiem tekstowym.</p>
-  <p>Do zamiany mowy na tekst Said potrzebuje modelu językowego. Pobierasz go raz (około 630 MB) przyciskiem w menu. Potem wszystko działa bez internetu. Said rozumie polski, angielski i wiele innych języków.</p>
+  <h2>How you use it</h2>
+  <p>Said lives in the menu bar next to the clock, not in the Dock. While you record, a small black pill with a timer and a stop button sits at the bottom of the screen. You can drag it anywhere.</p>
+  <p>When you join a call in Zoom, Teams or Google Meet, Said asks if you want to record it. It records you and the other people, and stops by itself when the call ends.</p>
+  <p>If nothing has been said for 2 minutes, you get a notification with a stop button. If your disk is getting full, Said warns you and saves the recording before space runs out.</p>
+  <p>Each recording gets its own folder in <code>Music/Said</code>, with the audio and a text file.</p>
 
-  <h2>Kod</h2>
-  <p>Said jest darmowy i otwarty (licencja MIT). Kod: <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
+  <h2>How it works</h2>
+  <p>Turning speech into text is done by Whisper, an open speech-recognition model. Said runs it on your Mac's own chip (the Neural Engine), the same way your Mac edits photos without a server. Ten seconds of audio takes about a second and a half.</p>
+  <p>The model is downloaded once, about 630 MB, when you click the button in the menu. That's the only time Said uses the internet. After that it works offline, in Polish, English and many other languages.</p>
+  <p>To tell that a call has started, Said only checks which app is using the microphone. It doesn't read your windows or browser tabs.</p>
+
+  <h2>Code</h2>
+  <p>Said is free and open source (MIT license). Code: <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
 </main>
 <script>
   document.getElementById('copy').addEventListener('click', async (e) => {
-    try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent); e.target.textContent = 'Skopiowano'; }
-    catch { e.target.textContent = 'Zaznacz i skopiuj'; }
-    setTimeout(() => e.target.textContent = 'Kopiuj', 1800);
+    try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent); e.target.textContent = 'Copied'; }
+    catch { e.target.textContent = 'Select and copy'; }
+    setTimeout(() => e.target.textContent = 'Copy', 1800);
   });
 </script>
 </body>

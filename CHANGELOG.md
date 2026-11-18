@@ -1,26 +1,35 @@
 # Changelog
 
-Wersje według [Semantic Versioning](https://semver.org/lang/pl/).
+Said follows [Semantic Versioning](https://semver.org/).
+
+## [0.3.1] - 2026-11-18
+
+- **Silence warning.** After 2 minutes without sound, Said sends a notification with a **Stop recording** button, and shows the same warning in the menu.
+- **Disk space.** Said warns when less than 2 GB is free, and stops and saves the recording before free space drops below 500 MB. It won't start recording when space is already that low.
+- **Smaller files.** Meeting and system audio is encoded to AAC while recording: about 0.7 MB per minute instead of about 23 MB.
+- **Cleaner menu** in the style of native macOS menus: rows with icons and hover highlight, the date of the last recording instead of its file name, settings grouped together, and model status shown only when it needs attention.
+- **Open recordings folder** button in the menu.
+- English README, changelog and website, plus a Polish version of the website.
 
 ## [0.3.0] - 2026-11-18
 
-- Głosy rozmówców: przy nagraniu spotkania Said nagrywa też dźwięk aplikacji do spotkań (Zoom, Teams, przeglądarka…) i miksuje go z mikrofonem w jeden plik. Działa także na słuchawkach. Używa Core Audio process tap (macOS 14.2+), więc nie potrzebuje uprawnienia do nagrywania ekranu.
-- Nowy przełącznik w menu: „Nagrywaj też dźwięk z komputera” dla zwykłych nagrań. Domyślnie wyłączony.
-- Skróty URL `said://start`, `said://stop` i `said://toggle`, na przykład dla Skrótów albo Raycasta.
-- Poprawka: uprawnienia i schemat URL dopisane w `Info.plist`.
+- Meeting recordings include the meeting app's audio (Zoom, Teams, browser…), mixed with the microphone into one file, so the other participants' voices are captured even on headphones. Uses a Core Audio process tap (macOS 14.2+) and needs no screen-recording permission.
+- New menu switch “Nagrywaj dźwięk z komputera” (record system audio) for regular recordings. Off by default.
+- `said://start`, `said://stop` and `said://toggle` URLs, e.g. for Shortcuts or Raycast.
+- Fix: permission descriptions and the URL scheme added to `Info.plist`.
 
 ## [0.2.0] - 2026-11-18
 
-- Wykrywanie spotkań: gdy Zoom, Teams, Google Meet (w przeglądarce), Webex, FaceTime, Slack, Discord albo WhatsApp zaczyna używać mikrofonu, Said proponuje nagranie i transkrypcję. Po zakończeniu rozmowy nagranie zatrzymuje się samo. Można to wyłączyć w menu.
-- Said pamięta dostęp do mikrofonu po aktualizacjach. Aplikacja jest podpisywana stałym lokalnym certyfikatem, a nie podpisem ad-hoc. Po przejściu na tę wersję macOS zapyta o mikrofon jeszcze tylko raz.
-- Transkrypcja nagrania ze spotkania zawiera nazwę aplikacji.
+- Meeting detection: when Zoom, Teams, Google Meet (in a browser), Webex, FaceTime, Slack, Discord or WhatsApp starts using the microphone, Said offers to record and transcribe. Recording stops on its own when the call ends. Can be switched off in the menu.
+- Said remembers microphone access across updates: it's signed with a stable local certificate instead of an ad-hoc signature. After updating to this version, macOS asks one more time.
+- Transcripts of meeting recordings include the name of the app.
 
 ## [0.1.0] - 2026-11-18
 
-Pierwsze wydanie.
+First release.
 
-- Nagrywanie głosu z paska menu, bez ikony w Docku.
-- Mała czarna pastylka na dole ekranu z animacją głosu, czasem i stopem. Można ją przesuwać, a Said zapamiętuje jej miejsce.
-- Lokalna transkrypcja (Whisper large-v3 turbo przez WhisperKit), z automatycznym wykrywaniem języka.
-- Każde nagranie w osobnym folderze w `~/Music/Said`, razem z transkrypcją w Markdown.
-- Instalator w jednej linijce (`install.sh`) i strona projektu.
+- Voice recording from the menu bar, with no Dock icon.
+- Small black pill at the bottom of the screen with a live waveform, timer and stop button. It can be dragged, and Said remembers where.
+- Local transcription (Whisper large-v3 turbo via WhisperKit) with automatic language detection.
+- Each recording in its own folder in `~/Music/Said`, with a Markdown transcript.
+- One-line installer (`install.sh`) and project website.
