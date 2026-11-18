@@ -28,6 +28,11 @@ struct MenuView: View {
 
             Divider()
             MeetingToggle(detector: recorder.meetings)
+            Toggle("Nagrywaj też dźwięk z komputera", isOn: $recorder.recordSystemAudio)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .font(.caption)
+                .help("Przy zwykłym nagraniu. Spotkania zawsze nagrywają też dźwięk aplikacji do spotkań.")
 
             Divider()
             modelSection
@@ -61,7 +66,12 @@ struct MenuView: View {
             }
             .controlSize(.small)
 
-            if transcriber.state == .transcribing {
+            if recorder.isSaving {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Zapisywanie…").font(.caption).foregroundStyle(.secondary)
+                }
+            } else if transcriber.state == .transcribing {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
                     Text("Transkrypcja…").font(.caption).foregroundStyle(.secondary)

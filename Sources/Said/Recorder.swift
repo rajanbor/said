@@ -20,12 +20,21 @@ struct Recording: Codable, Equatable {
 /// Records the microphone to ~/Music/Said/*.m4a. Everything stays on this Mac.
 @MainActor
 final class Recorder: ObservableObject {
+    static let shared = Recorder()
+
     @Published private(set) var isRecording = false
     @Published private(set) var elapsed: TimeInterval = 0
     /// Recent input levels (0...1), newest last — drives the pill animation.
     @Published private(set) var levels: [Float] = Array(repeating: 0, count: Recorder.barCount)
     @Published private(set) var last: Recording?
     @Published var error: String?
+    /// True while the mic and system audio are being mixed into the final file.
+    @Published private(set) var isSaving = false
+
+    /// Also record what the Mac plays (for manual recordings; meetings always include the meeting app).
+    @Published var recordSystemAudio: Bool {
+        didSet { UserDefaults.standard.set(recordSystemAudio, forKey: Self.systemAudioKey) }
+    }
 
     /// Meeting that is currently offered for recording (drives the prompt pill).
     @Published private(set) var promptMeeting: MeetingDetector.Meeting?
@@ -35,6 +44,16 @@ final class Recorder: ObservableObject {
 
     static let barCount = 18
     private static let lastKey = "lastRecording"
+    private static let systemAudioKey = "recordSystemAudio"
+
+    /// Files of the recording in progress.
+    private struct Session {
+        let final: URL      // <stamp>/said_<stamp>.m4a
+        let mic: URL        // <stamp>/.mic.m4a
+        let system: URL?    // <stamp>/.system.caf
+    }
+    private var session: Session?
+    private var tap: AnyObject?   // SystemAudioTap (macOS 14.2+)
 
     private var recorder: AVAudioRecorder?
     private var timer: Timer?
@@ -55,6 +74,7 @@ final class Recorder: ObservableObject {
     }
 
     init() {
+        recordSystemAudio = UserDefaults.standard.bool(forKey: Self.systemAudioKey)
         if let data = UserDefaults.standard.data(forKey: Self.lastKey),
            let rec = try? JSONDecoder().decode(Recording.self, from: data),
            FileManager.default.fileExists(atPath: rec.path) {
@@ -121,20 +141,43 @@ final class Recorder: ObservableObject {
     }
 
     func stop() {
-        guard let recorder, isRecording else { return }
+        guard let recorder, let session, isRecording else { return }
         let duration = recorder.currentTime
         recorder.stop()
+        if #available(macOS 14.2, *) { (tap as? SystemAudioTap)?.stop() }
+        tap = nil
         timer?.invalidate()
         timer = nil
         self.recorder = nil
+        self.session = nil
         isRecording = false
         pill.hide()
 
-        let rec = Recording(path: recorder.url.path, duration: duration, date: Date(),
-                            source: recordingMeeting?.name)
+        let source = recordingMeeting?.name
         recordingMeeting = nil
-        save(rec)
-        if transcriber.isInstalled { transcribeLast() }
+        isSaving = true
+        Task {
+            let url = await Self.finish(session)
+            isSaving = false
+            save(Recording(path: url.path, duration: duration, date: Date(), source: source))
+            if transcriber.isInstalled { transcribeLast() }
+        }
+    }
+
+    /// Mixes mic + system audio into the final .m4a (or just keeps the mic) and removes temp files.
+    private static func finish(_ s: Session) async -> URL {
+        let fm = FileManager.default
+        defer {
+            try? fm.removeItem(at: s.mic)
+            if let system = s.system { try? fm.removeItem(at: system) }
+        }
+        if let system = s.system,
+           let size = try? fm.attributesOfItem(atPath: system.path)[.size] as? Int, size > 64 * 1024,
+           await AudioMixer.mix([s.mic, system], into: s.final) {
+            return s.final
+        }
+        try? fm.moveItem(at: s.mic, to: s.final)
+        return s.final
     }
 
     /// Runs local transcription for the last recording (automatic when the model is installed).
@@ -164,7 +207,8 @@ final class Recorder: ObservableObject {
             let stamp = fmt.string(from: Date())
             let dir = Self.folder.appendingPathComponent(stamp, isDirectory: true)
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            let url = dir.appendingPathComponent("said_\(stamp).m4a")
+            let final = dir.appendingPathComponent("said_\(stamp).m4a")
+            let url = dir.appendingPathComponent(".mic.m4a")
 
             let settings: [String: Any] = [
                 AVFormatIDKey: kAudioFormatMPEG4AAC,
@@ -178,6 +222,8 @@ final class Recorder: ObservableObject {
                 userInfo: [NSLocalizedDescriptionKey: "Nie udało się rozpocząć nagrywania."]) }
 
             recorder = r
+            session = Session(final: final, mic: url,
+                              system: startSystemAudio(writingTo: dir.appendingPathComponent(".system.caf")))
             elapsed = 0
             levels = Array(repeating: 0, count: Self.barCount)
             isRecording = true
@@ -192,13 +238,38 @@ final class Recorder: ObservableObject {
         }
     }
 
+    /// Starts tapping the meeting app (or the whole Mac) if wanted. Returns the file it writes, if any.
+    private func startSystemAudio(writingTo url: URL) -> URL? {
+        guard #available(macOS 14.2, *) else { return nil }
+        let scope: SystemAudioTap.Scope
+        if let meeting = recordingMeeting {
+            let ids = MeetingDetector.processObjects(bundlePrefix: meeting.bundleID)
+            scope = ids.isEmpty ? .everything : .processes(ids)
+        } else if recordSystemAudio {
+            scope = .everything
+        } else {
+            return nil
+        }
+        let t = SystemAudioTap()
+        do {
+            try t.start(scope: scope, writingTo: url)
+            tap = t
+            return url
+        } catch {
+            t.stop()
+            self.error = "Nagrywam tylko mikrofon: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
     private func tick() {
         guard let recorder else { return }
         recorder.updateMeters()
         elapsed = recorder.currentTime
         // dB (-160...0) -> 0...1, with a usable range of roughly -50 dB to 0 dB.
         let db = recorder.averagePower(forChannel: 0)
-        let level = max(0, min(1, (db + 50) / 50))
+        var level = max(0, min(1, (db + 50) / 50))
+        if #available(macOS 14.2, *), let tap = tap as? SystemAudioTap { level = max(level, tap.level) }
         levels.removeFirst()
         levels.append(level)
     }
@@ -206,6 +277,18 @@ final class Recorder: ObservableObject {
     private func denied() {
         recordingMeeting = nil
         error = "Brak dostępu do mikrofonu. Włącz go w Ustawieniach systemowych → Prywatność i ochrona → Mikrofon."
+    }
+
+    // MARK: - URL scheme (said://start, said://stop, said://toggle) — Shortcuts, Raycast…
+
+    func handle(_ url: URL) {
+        guard url.scheme == "said" else { return }
+        switch url.host {
+        case "start": start()
+        case "stop": stop()
+        case "toggle": toggle()
+        default: break
+        }
     }
 
     // MARK: - Summary actions

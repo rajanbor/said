@@ -16,12 +16,25 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.2.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.github.rajanbor.said</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>said</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>2</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Said nagrywa dźwięk spotkania (głosy rozmówców) i zapisuje go lokalnie na tym Macu.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Said nagrywa Twój głos i zapisuje go lokalnie na tym Macu.</string>
 </dict>

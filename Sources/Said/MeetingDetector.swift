@@ -107,6 +107,11 @@ final class MeetingDetector: ObservableObject {
         return nil
     }
 
+    /// Core Audio process objects of every process whose bundle ID starts with `bundlePrefix`.
+    static func processObjects(bundlePrefix: String) -> [AudioObjectID] {
+        processObjects().filter { bundleID($0)?.hasPrefix(bundlePrefix) == true }
+    }
+
     private static func address(_ selector: AudioObjectPropertySelector) -> AudioObjectPropertyAddress {
         AudioObjectPropertyAddress(mSelector: selector,
                                    mScope: kAudioObjectPropertyScopeGlobal,

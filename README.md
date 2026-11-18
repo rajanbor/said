@@ -48,7 +48,15 @@ Gdy aplikacja do spotkań zaczyna używać mikrofonu (Zoom, Microsoft Teams, Goo
 
 Said sprawdza to przez Core Audio: widzi tylko, który program używa mikrofonu. Nie czyta okien ani kart przeglądarki i nie potrzebuje dodatkowych uprawnień. Dlatego każde użycie mikrofonu w przeglądarce traktuje jak spotkanie. Wykrywanie można wyłączyć w menu.
 
-> Said nagrywa na razie tylko mikrofon. Na słuchawkach głosy rozmówców nie trafią do nagrania. Nagrywanie dźwięku systemowego jest w roadmapie.
+### Głosy rozmówców
+
+Nagranie spotkania zawiera Twój mikrofon i dźwięk samej aplikacji do spotkań (tylko Zooma, tylko przeglądarki itd., bez muzyki czy powiadomień z innych programów). Oba źródła są miksowane w jeden plik `.m4a`, więc działa to także na słuchawkach. Said używa do tego Core Audio process tap (macOS 14.2+). Przy pierwszym użyciu macOS zapyta o zgodę na **nagrywanie dźwięku systemu**. To osobne uprawnienie, nie nagrywanie ekranu.
+
+Przy zwykłym nagraniu możesz włączyć w menu **Nagrywaj też dźwięk z komputera**. Wtedy nagrywa się wszystko, co gra Mac.
+
+## Skróty URL
+
+`said://start`, `said://stop` i `said://toggle` sterują nagrywaniem z dowolnego miejsca: Skrótów, Raycasta, Alfreda albo Terminala (`open said://toggle`).
 
 ## Transkrypcja (lokalna)
 
@@ -84,6 +92,8 @@ Sources/Said/
   Recorder.swift   AVAudioRecorder, metering, ostatnie nagranie
   Transcriber.swift  WhisperKit: pobranie modelu, transkrypcja → .md
   MeetingDetector.swift  który program do spotkań używa mikrofonu (Core Audio)
+  SystemAudioTap.swift   dźwięk aplikacji / systemu (Core Audio process tap)
+  AudioMixer.swift       miks mikrofonu i dźwięku systemu w jeden .m4a
 Resources/          Info.plist, AppIcon.icns
 scripts/build-app.sh   buduje build/Said.app
 scripts/make-icon.swift  generuje ikonę
@@ -106,9 +116,8 @@ Skrypt podbija wersję w `Info.plist`, sprawdza, czy aplikacja się buduje, twor
 
 ## Roadmapa (pomysły)
 
-- Rozróżnianie mówców (diarization)
+- Rozróżnianie mówców (diarization), np. „Ty” vs „Rozmówcy” z osobnych ścieżek
 - Notatka Markdown (np. do Obsidiana) generowana lokalnym LLM (Ollama)
-- Nagrywanie audio systemowego (ScreenCaptureKit) dla spotkań online
 - Globalny skrót klawiszowy
 
 Pamiętaj, by informować rozmówców o nagrywaniu.

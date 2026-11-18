@@ -2,7 +2,8 @@ import SwiftUI
 
 @main
 struct SaidApp: App {
-    @StateObject private var recorder = Recorder()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @StateObject private var recorder = Recorder.shared
 
     var body: some Scene {
         MenuBarExtra {
@@ -32,5 +33,11 @@ extension TimeInterval {
         return h > 0
             ? String(format: "%d:%02d:%02d", h, m, sec)
             : String(format: "%02d:%02d", m, sec)
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func application(_ application: NSApplication, open urls: [URL]) {
+        MainActor.assumeIsolated { urls.forEach(Recorder.shared.handle) }
     }
 }
