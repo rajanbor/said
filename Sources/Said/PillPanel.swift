@@ -20,11 +20,10 @@ final class FloatingPanel {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.level = .floating
-        panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 
-        let host = DraggableHostingView(rootView: content())
+        let host = NSHostingView(rootView: content())
         host.frame = NSRect(origin: .zero, size: size)
         panel.contentView = host
     }
@@ -40,10 +39,15 @@ final class FloatingPanel {
         NSAnimationContext.runAnimationGroup { $0.duration = 0.2; panel.animator().alphaValue = 1 }
     }
 
+    /// Saves where the pill is, so it comes back to the same spot next time.
+    static func rememberPosition(of window: NSWindow) {
+        let f = window.frame
+        UserDefaults.standard.set([f.midX, f.midY], forKey: centerKey)
+    }
+
     func hide() {
         guard panel.isVisible else { return }
-        let f = panel.frame
-        UserDefaults.standard.set([f.midX, f.midY], forKey: Self.centerKey)
+        Self.rememberPosition(of: panel)
         NSAnimationContext.runAnimationGroup({ $0.duration = 0.2; panel.animator().alphaValue = 0 }) {
             MainActor.assumeIsolated { self.panel.orderOut(nil) }
         }
@@ -64,9 +68,33 @@ final class FloatingPanel {
     }
 }
 
-/// Lets a click-and-drag anywhere on the pill (except buttons) move the window.
-private final class DraggableHostingView<Content: View>: NSHostingView<Content> {
-    override var mouseDownCanMoveWindow: Bool { true }
+/// Drag the pill anywhere by grabbing it outside its buttons.
+///
+/// AppKit's "movable by window background" doesn't work here: SwiftUI's hosting view
+/// handles the mouse itself. So the drag is a SwiftUI gesture that moves the window,
+/// and buttons still win because the drag only starts after the mouse moves a little.
+private struct WindowDrag: ViewModifier {
+    @State private var start: (mouse: NSPoint, origin: NSPoint)?
+
+    func body(content: Content) -> some View {
+        content.gesture(
+            DragGesture(minimumDistance: 2)
+                .onChanged { _ in
+                    guard let window = NSApp.currentEvent?.window else { return }
+                    let mouse = NSEvent.mouseLocation   // screen coordinates, unaffected by the move
+                    if start == nil { start = (mouse, window.frame.origin) }
+                    guard let start else { return }
+                    window.setFrameOrigin(NSPoint(x: start.origin.x + mouse.x - start.mouse.x,
+                                                  y: start.origin.y + mouse.y - start.mouse.y))
+                }
+                .onEnded { _ in
+                    if let window = NSApp.currentEvent?.window {
+                        FloatingPanel.rememberPosition(of: window)
+                    }
+                    start = nil
+                }
+        )
+    }
 }
 
 /// Black capsule shared by both pills.
@@ -77,6 +105,8 @@ private struct PillBackground: ViewModifier {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black, in: Capsule())
             .overlay(Capsule().strokeBorder(Color.white.opacity(0.1)))
+            .contentShape(Capsule())
+            .modifier(WindowDrag())
             .environment(\.colorScheme, .dark)
     }
 }
