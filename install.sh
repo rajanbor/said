@@ -34,7 +34,11 @@ else
 fi
 
 say "Buduję Said (pierwszy raz może potrwać kilka minut)…"
-( cd "$SRC" && ./scripts/build-app.sh >/dev/null )
+LOG="$HOME/.said/build.log"
+if ! ( cd "$SRC" && ./scripts/build-app.sh ) >"$LOG" 2>&1; then
+  tail -n 30 "$LOG" >&2
+  fail "Budowanie nie powiodło się. Pełny log: $LOG"
+fi
 
 DEST="/Applications"
 [[ -w "$DEST" ]] || DEST="$HOME/Applications"
