@@ -42,6 +42,14 @@ rm -rf /Applications/Said.app ~/.said "$HOME/Library/Application Support/Said"
 
 Strona projektu: https://rajanbor.github.io/said/
 
+## Wykrywanie spotkań
+
+Gdy aplikacja do spotkań zaczyna używać mikrofonu (Zoom, Microsoft Teams, Google Meet w Chrome, Arc, Edge, Brave, Firefox albo Safari, Webex, FaceTime, Slack, Discord, WhatsApp), na dole ekranu pojawia się pastylka „Nagrać i przepisać?”. Kliknij **Nagraj**, a gdy rozmowa się skończy i aplikacja zwolni mikrofon, Said sam zatrzyma nagranie i zrobi transkrypcję. Jeśli nic nie klikniesz, propozycja zniknie po 30 sekundach.
+
+Said sprawdza to przez Core Audio: widzi tylko, który program używa mikrofonu. Nie czyta okien ani kart przeglądarki i nie potrzebuje dodatkowych uprawnień. Dlatego każde użycie mikrofonu w przeglądarce traktuje jak spotkanie. Wykrywanie można wyłączyć w menu.
+
+> Said nagrywa na razie tylko mikrofon. Na słuchawkach głosy rozmówców nie trafią do nagrania. Nagrywanie dźwięku systemowego jest w roadmapie.
+
 ## Transkrypcja (lokalna)
 
 Po zakończeniu nagrania Said automatycznie robi transkrypcję modelem **Whisper large-v3 turbo** przez [WhisperKit](https://github.com/argmaxinc/WhisperKit) (Core ML / Neural Engine). Język jest wykrywany automatycznie (polski, angielski i inne). Wynik trafia do folderu nagrania jako Markdown ze znacznikami czasu.
@@ -61,7 +69,9 @@ Po zakończeniu nagrania Said automatycznie robi transkrypcję modelem **Whisper
 ./scripts/build-app.sh --open
 ```
 
-Skrypt buduje `build/Said.app` (podpis ad-hoc). Przy pierwszym nagraniu macOS zapyta o dostęp do mikrofonu.
+Skrypt buduje `build/Said.app`. Przy pierwszym nagraniu macOS zapyta o dostęp do mikrofonu.
+
+Aplikacja jest podpisywana lokalnym, samopodpisanym certyfikatem „Said Local Signing”. Trzymany jest w osobnym pęku kluczy `~/.said/signing`, więc systemowy pęk kluczy pozostaje nietknięty. Dzięki temu macOS widzi każdą nową wersję jako tę samą aplikację i pamięta dostęp do mikrofonu. Przy podpisie ad-hoc pytałby po każdej aktualizacji.
 Aplikację możesz przenieść do `/Applications`.
 
 ## Struktura
@@ -70,9 +80,10 @@ Aplikację możesz przenieść do `/Applications`.
 Sources/Said/
   SaidApp.swift    MenuBarExtra + ikona w pasku
   MenuView.swift   zawartość menu: nagraj/stop + podsumowanie
-  PillPanel.swift  pływająca pastylka (NSPanel + SwiftUI)
+  PillPanel.swift  pastylki: nagrywanie i propozycja spotkania (NSPanel + SwiftUI)
   Recorder.swift   AVAudioRecorder, metering, ostatnie nagranie
   Transcriber.swift  WhisperKit: pobranie modelu, transkrypcja → .md
+  MeetingDetector.swift  który program do spotkań używa mikrofonu (Core Audio)
 Resources/          Info.plist, AppIcon.icns
 scripts/build-app.sh   buduje build/Said.app
 scripts/make-icon.swift  generuje ikonę

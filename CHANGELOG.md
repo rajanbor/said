@@ -2,6 +2,12 @@
 
 Wersje według [Semantic Versioning](https://semver.org/lang/pl/).
 
+## [0.2.0] - 2026-11-18
+
+- Wykrywanie spotkań: gdy Zoom, Teams, Google Meet (w przeglądarce), Webex, FaceTime, Slack, Discord albo WhatsApp zaczyna używać mikrofonu, Said proponuje nagranie i transkrypcję. Po zakończeniu rozmowy nagranie zatrzymuje się samo. Można to wyłączyć w menu.
+- Said pamięta dostęp do mikrofonu po aktualizacjach. Aplikacja jest podpisywana stałym lokalnym certyfikatem, a nie podpisem ad-hoc. Po przejściu na tę wersję macOS zapyta o mikrofon jeszcze tylko raz.
+- Transkrypcja nagrania ze spotkania zawiera nazwę aplikacji.
+
 ## [0.1.0] - 2026-11-18
 
 Pierwsze wydanie.

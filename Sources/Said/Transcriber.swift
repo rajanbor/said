@@ -128,6 +128,7 @@ final class Transcriber: ObservableObject {
             "",
             "- Plik: `\(rec.url.lastPathComponent)`",
             "- Czas: \(rec.duration.clock)",
+        ] + (rec.source.map { ["- Spotkanie: \($0)"] } ?? []) + [
             "- Język: \(language)",
             "",
             "## Transkrypcja",

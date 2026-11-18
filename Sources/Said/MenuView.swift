@@ -27,6 +27,9 @@ struct MenuView: View {
             }
 
             Divider()
+            MeetingToggle(detector: recorder.meetings)
+
+            Divider()
             modelSection
 
             Divider()
@@ -108,6 +111,23 @@ struct MenuView: View {
                 }
                 .controlSize(.small)
             }
+        }
+    }
+}
+
+/// "Proponuj nagrywanie spotkań" switch, plus which meeting is live right now.
+private struct MeetingToggle: View {
+    @ObservedObject var detector: MeetingDetector
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle("Proponuj nagrywanie spotkań", isOn: $detector.isEnabled)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .font(.caption)
+            Text(detector.active.map { "Teraz: \($0.name)" } ?? "Zoom, Teams, Google Meet i inne")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
     }
 }

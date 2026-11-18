@@ -7,6 +7,8 @@ struct Recording: Codable, Equatable {
     let duration: TimeInterval
     let date: Date
     var transcriptPath: String?
+    /// Meeting app the recording was started for (e.g. "Zoom"), if any.
+    var source: String? = nil
 
     var url: URL { URL(fileURLWithPath: path) }
     var sizeText: String {
@@ -25,14 +27,27 @@ final class Recorder: ObservableObject {
     @Published private(set) var last: Recording?
     @Published var error: String?
 
+    /// Meeting that is currently offered for recording (drives the prompt pill).
+    @Published private(set) var promptMeeting: MeetingDetector.Meeting?
+
     let transcriber = Transcriber()
+    let meetings = MeetingDetector()
 
     static let barCount = 18
     private static let lastKey = "lastRecording"
 
     private var recorder: AVAudioRecorder?
     private var timer: Timer?
-    private lazy var pill = PillPanel(recorder: self)
+    /// Set when recording was started from the meeting prompt: the call ending stops it.
+    private var recordingMeeting: MeetingDetector.Meeting?
+    private var promptTimeout: Task<Void, Never>?
+
+    private lazy var pill = FloatingPanel(size: NSSize(width: 196, height: 38)) {
+        PillView().environmentObject(self)
+    }
+    private lazy var prompt = FloatingPanel(size: NSSize(width: 268, height: 42)) {
+        MeetingPromptView().environmentObject(self)
+    }
 
     static var folder: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -45,6 +60,42 @@ final class Recorder: ObservableObject {
            FileManager.default.fileExists(atPath: rec.path) {
             last = rec
         }
+        meetings.onStart = { [weak self] in self?.meetingStarted($0) }
+        meetings.onEnd = { [weak self] in self?.meetingEnded($0) }
+    }
+
+    // MARK: - Meetings
+
+    private func meetingStarted(_ meeting: MeetingDetector.Meeting) {
+        guard !isRecording else { return }
+        promptMeeting = meeting
+        prompt.show()
+        // Don't nag: the offer disappears on its own after 30 s.
+        promptTimeout?.cancel()
+        promptTimeout = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(30))
+            guard !Task.isCancelled else { return }
+            self?.dismissMeetingPrompt()
+        }
+    }
+
+    private func meetingEnded(_ meeting: MeetingDetector.Meeting) {
+        dismissMeetingPrompt()
+        if isRecording, recordingMeeting == meeting { stop() }
+    }
+
+    func acceptMeetingPrompt() {
+        let meeting = promptMeeting
+        dismissMeetingPrompt()
+        recordingMeeting = meeting
+        start()
+    }
+
+    func dismissMeetingPrompt() {
+        promptTimeout?.cancel()
+        promptTimeout = nil
+        promptMeeting = nil
+        prompt.hide()
     }
 
     func toggle() {
@@ -54,6 +105,7 @@ final class Recorder: ObservableObject {
     func start() {
         guard !isRecording else { return }
         error = nil
+        dismissMeetingPrompt()
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
             beginRecording()
@@ -78,7 +130,9 @@ final class Recorder: ObservableObject {
         isRecording = false
         pill.hide()
 
-        let rec = Recording(path: recorder.url.path, duration: duration, date: Date())
+        let rec = Recording(path: recorder.url.path, duration: duration, date: Date(),
+                            source: recordingMeeting?.name)
+        recordingMeeting = nil
         save(rec)
         if transcriber.isInstalled { transcribeLast() }
     }
@@ -134,6 +188,7 @@ final class Recorder: ObservableObject {
             }
         } catch {
             self.error = error.localizedDescription
+            recordingMeeting = nil
         }
     }
 
@@ -149,6 +204,7 @@ final class Recorder: ObservableObject {
     }
 
     private func denied() {
+        recordingMeeting = nil
         error = "Brak dostępu do mikrofonu. Włącz go w Ustawieniach systemowych → Prywatność i ochrona → Mikrofon."
     }
 
