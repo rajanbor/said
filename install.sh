@@ -35,6 +35,7 @@ fi
 
 say "Buduję Said (pierwszy raz może potrwać kilka minut)…"
 LOG="$HOME/.said/build.log"
+mkdir -p "$(dirname "$LOG")"
 if ! ( cd "$SRC" && ./scripts/build-app.sh ) >"$LOG" 2>&1; then
   tail -n 30 "$LOG" >&2
   fail "Budowanie nie powiodło się. Pełny log: $LOG"
