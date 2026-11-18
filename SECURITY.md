@@ -53,6 +53,6 @@ Please report security issues privately through GitHub's
 
 **No Apple notarization.** Said is signed with a local self-signed certificate. That keeps permissions stable across updates, but unlike Apple's Developer ID it doesn't prove who built the app.
 
-**Trust on first use.** The installer's tag check protects updates. It can't protect the very first install, and it can't stop someone who controls the repository from publishing a new, malicious tag. Protected tags and branches on GitHub reduce that risk.
+**Trust on first use.** The installer's tag check protects updates. It can't protect the very first install, and it can't stop someone who controls the repository from publishing a new, malicious tag. On GitHub, `main` can't be force-pushed or deleted, and release tags (`v*`) can't be moved or deleted. Both rules apply to everyone, with no exceptions.
 
 **Shortcuts.** Starting from Shortcuts or Raycast now needs one click on the pill.
