@@ -104,9 +104,13 @@ final class Recorder: ObservableObject {
     private func beginRecording() {
         do {
             try FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
-            let stamp = DateFormatter()
-            stamp.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-            let url = Self.folder.appendingPathComponent("said_\(stamp.string(from: Date())).m4a")
+            // One folder per recording: <stamp>/said_<stamp>.m4a (+ .md transcript later).
+            let fmt = DateFormatter()
+            fmt.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+            let stamp = fmt.string(from: Date())
+            let dir = Self.folder.appendingPathComponent(stamp, isDirectory: true)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let url = dir.appendingPathComponent("said_\(stamp).m4a")
 
             let settings: [String: Any] = [
                 AVFormatIDKey: kAudioFormatMPEG4AAC,

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Said: lokalny rejestrator głosu dla macOS</title>
+<meta name="description" content="Nagrywaj i transkrybuj głos na Macu. Bez chmury, bez internetu.">
+<link rel="icon" href="icon.png">
+<style>
+  :root { --bg:#000; --fg:#fff; --muted:#9a9a9a; --line:#222; --red:#ff3b30; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+  main { max-width:680px; margin:0 auto; padding:72px 16px 48px; }
+  .logo { width:112px; height:112px; display:block; margin:0 0 24px -8px; }
+  h1 { font-size:44px; line-height:1.1; margin:0 0 12px; letter-spacing:-0.02em; }
+  .lead { color:var(--muted); font-size:19px; margin:0 0 40px; }
+  .cmd { display:flex; align-items:center; gap:12px; background:#0d0d0d; border:1px solid var(--line);
+         border-radius:14px; padding:14px 14px 14px 18px; }
+  .cmd code { flex:1; overflow-x:auto; white-space:nowrap; font:14px/1.4 ui-monospace, "SF Mono", Menlo, monospace; }
+  .cmd code::before { content:"$ "; color:var(--muted); }
+  button { flex:none; background:var(--fg); color:var(--bg); border:0; border-radius:9px; padding:8px 14px;
+           font:600 14px/1 inherit; font-family:inherit; cursor:pointer; }
+  button:active { transform:translateY(1px); }
+  .hint { color:var(--muted); font-size:14px; margin:12px 0 48px; }
+  ul { list-style:none; padding:0; margin:0 0 48px; display:grid; gap:14px; }
+  li { padding-left:22px; position:relative; }
+  li::before { content:""; position:absolute; left:0; top:.6em; width:8px; height:8px; border-radius:50%; background:var(--red); }
+  li b { font-weight:600; }
+  footer { border-top:1px solid var(--line); padding-top:20px; color:var(--muted); font-size:14px; }
+  a { color:var(--fg); }
+  @media (max-width:520px) { h1 { font-size:34px; } main { padding-top:48px; } }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="icon.png" alt="">
+  <h1>Said</h1>
+  <p class="lead">Nagrywaj głos jednym kliknięciem w pasku menu i dostań gotową transkrypcję. Wszystko zostaje na Twoim Macu.</p>
+
+  <div class="cmd">
+    <code id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</code>
+    <button id="copy" type="button">Kopiuj</button>
+  </div>
+  <p class="hint">Wklej do Terminala. Komenda pobiera kod, buduje aplikację na Twoim Macu i instaluje ją w Aplikacjach. Wymaga macOS 14+ i narzędzi Xcode Command Line Tools (instalator zaproponuje je sam). Uruchom ponownie, żeby zaktualizować.</p>
+
+  <ul>
+    <li><b>Pasek menu, bez Docka.</b> Said żyje przy zegarze i nie zajmuje miejsca w Docku.</li>
+    <li><b>Pływająca pastylka.</b> Mała czarna pastylka z animacją głosu. Przeciągnij ją, gdzie chcesz.</li>
+    <li><b>Lokalna transkrypcja.</b> Whisper large-v3 turbo na Neural Engine. Polski, angielski i inne języki.</li>
+    <li><b>Folder na każde nagranie.</b> <code>~/Music/Said/&lt;data&gt;/</code> z plikiem audio i transkrypcją w Markdown.</li>
+    <li><b>Zero chmury.</b> Internet jest potrzebny tylko raz, do pobrania modelu (~630 MB).</li>
+  </ul>
+
+  <footer>Open source, licencja MIT · <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></footer>
+</main>
+<script>
+  document.getElementById('copy').addEventListener('click', async (e) => {
+    const text = document.getElementById('cmd').textContent;
+    try { await navigator.clipboard.writeText(text); e.target.textContent = 'Skopiowano'; }
+    catch { e.target.textContent = 'Zaznacz i skopiuj'; }
+    setTimeout(() => e.target.textContent = 'Kopiuj', 1800);
+  });
+</script>
+</body>
+</html>
