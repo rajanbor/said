@@ -2,9 +2,9 @@
 
 # Said
 
-A small, **local-first** voice recorder for macOS. Click the icon in the menu bar, talk, click stop, and get the recording plus a transcript. Nothing is sent to the cloud.
+Said records what you say on your Mac and turns it into text. Click the icon at the top of the screen, talk, click stop. A moment later you have the recording and a transcript, and neither ever leaves your computer.
 
-**Website:** https://rajanbor.github.io/said/ ([Polska wersja](https://rajanbor.github.io/said/pl/))
+**Website:** https://rajanbor.github.io/said/ · [po polsku](https://rajanbor.github.io/said/pl/) · [what's new](https://rajanbor.github.io/said/releases.html)
 
 <p>
   <img src="docs/screenshots/pill.webp" width="420" alt="The recording pill at the bottom of the screen: a red dot, a live waveform, the timer 00:09 and a red stop button">
@@ -12,75 +12,84 @@ A small, **local-first** voice recorder for macOS. Click the icon in the menu ba
   <img src="docs/screenshots/menu.jpg" width="345" alt="The Said menu in the menu bar: Record, Open recordings folder, settings for meeting detection and system audio, and Quit">
 </p>
 
-*Left: the recording pill. Right: the menu (shown in Polish, the app follows your system language).*
+*The pill you see while recording, and the menu. The menu is shown in Polish because Said follows your system language.*
 
 ## Install
 
-Paste into Terminal:
+Open Terminal, paste this and press Return:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash
 ```
 
-The script downloads the latest release into `~/.said/src`, checks that the release wasn't rewritten since you last installed it, builds the app on your Mac and installs `Said.app` into `/Applications`. If `/Applications` isn't writable, it uses `~/Applications`. You need macOS 14 or later and the Xcode Command Line Tools; the script offers to install them. Run the same command again to update.
+That's it. It takes a few minutes the first time, because Said is built on your own Mac. You need macOS 14 or newer. If your Mac asks to install Apple's developer tools, say yes and run the command again.
 
-To install the latest code from `main` instead of the newest release:
+To update later, run the same command.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | SAID_VERSION=main bash
-```
+## Using it
 
-Uninstall:
+**Recording a thought.** Click the Said icon in the menu bar and choose **Record**. A small black pill appears at the bottom of the screen with a timer and a stop button. Keep working; the pill won't get in your way, and you can drag it wherever you like. Click stop when you're done.
+
+**Recording a call.** When you join a call in Zoom, Teams, Google Meet or similar, Said asks *“Record and transcribe?”*. Click **Record**, and it captures both you and the other people, even if you wear headphones. When the call ends, it stops by itself. Ignore the question and it goes away after 30 seconds.
+
+**Finding your recordings.** Each recording gets its own folder in `Music/Said`, with the audio and a text file of everything that was said, with timestamps. The menu has a button that opens that folder.
+
+**If you forget to stop.** After 2 minutes of silence Said sends a notification with a stop button. If your disk is getting full, it warns you and saves the recording before space runs out.
+
+Before you record other people, let them know.
+
+## Your privacy
+
+- **Recordings stay on your Mac.** No cloud, no account, no analytics.
+- **The internet is used once:** to download the speech-recognition model (about 630 MB), when you click the button in the menu. After that Said works offline.
+- **Nothing records without you.** Recording starts only when you click. Links that try to start a recording from another app only show a question you have to answer.
+- **Only the call is recorded.** For calls, Said captures the meeting app's sound, not your music or notifications. If it can't tell which sound belongs to the call, it records just your microphone.
+- **Only you can open the files.** Other people who use this Mac can't get into your recordings folder.
+
+More details are in [SECURITY.md](SECURITY.md).
+
+## How it works, in short
+
+Said turns speech into text with **Whisper**, an openly available speech-recognition model. It runs on your Mac's own chip, the way your Mac edits photos without a server. Ten seconds of audio takes about a second and a half. Whisper understands Polish, English and many other languages, and works out which one you're speaking by itself.
+
+To notice that a call has started, Said only checks which app is using the microphone. It doesn't look at your screen, windows or browser tabs.
+
+## Uninstall
 
 ```bash
 rm -rf /Applications/Said.app ~/.said "$HOME/Library/Application Support/Said"
 ```
 
-## What it does
+Your recordings in `Music/Said` stay; delete that folder too if you don't need them.
 
-- **Menu bar only.** No Dock icon.
-- **Floating pill.** While you record, a small black pill sits at the bottom of the screen with a live waveform, a timer and a stop button. Drag it anywhere; Said remembers the spot. It never steals focus.
-- **Meeting detection.** When Zoom, Microsoft Teams, Google Meet (in a browser), Webex, FaceTime, Slack, Discord or WhatsApp starts using the microphone, Said offers to record and transcribe. When the call ends, recording stops on its own.
-- **The other side of the call.** Meeting recordings include the meeting app's audio, so the other participants' voices are captured too, even on headphones.
-- **Local transcription.** Polish, English and many other languages, detected automatically.
-- **Silence and disk warnings.** After 2 minutes of silence, Said sends a notification with a **Stop recording** button. It also warns when the disk is getting full and stops safely before it runs out.
-- **English and Polish.** The app follows your system language.
-- **One folder per recording:**
+---
 
-  ```
-  ~/Music/Said/2026-11-18_10-15-00/
-    said_2026-11-18_10-15-00.m4a   audio (mic + call audio mixed)
-    said_2026-11-18_10-15-00.md    transcript with timestamps
-  ```
+## Under the hood
 
-## How it works
+Said is a native Swift app (SwiftUI + AppKit). Apart from [WhisperKit](https://github.com/argmaxinc/WhisperKit), it uses only Apple's own frameworks.
 
-Said is a native Swift app (SwiftUI + AppKit). It uses only Apple frameworks plus [WhisperKit](https://github.com/argmaxinc/WhisperKit).
+- **Recording.**
+  - The microphone is recorded with `AVAudioRecorder`.
+  - For calls, a Core Audio **process tap** (macOS 14.2+) captures only the meeting app's audio, encoded to AAC as it records. It fails closed: no meeting audio means microphone only, never the whole system.
+  - The two tracks are mixed into one `.m4a`. Temporary files are deleted only after the result is confirmed playable.
+  - Folders are `0700` and files `0600`.
+- **Meeting detection.** Every 2 seconds Said asks Core Audio which processes are capturing audio input and matches their bundle IDs against known meeting apps. This needs no permission.
+- **Transcription.**
+  - The model is **Whisper large-v3 turbo**, converted to Core ML and quantized to about 630 MB. It runs on the Neural Engine and GPU.
+  - The model is downloaded only when you click the button. After that it loads with downloads switched off.
+  - The transcript is Markdown with timestamps.
+- **Permissions.** macOS asks for:
+  - the microphone;
+  - system audio recording, for calls (this isn't screen recording);
+  - notifications.
 
-1. **Recording.** The microphone is recorded with `AVAudioRecorder`. For meetings, a Core Audio **process tap** (macOS 14.2+) captures only the meeting app's audio, encoded to AAC on the fly. If that app's audio can't be found, Said records the microphone only and never falls back to everything the Mac plays. After you stop, both tracks are mixed into one `.m4a`. The temporary tracks are deleted only once the final file is confirmed playable. Recordings are readable by your user only (`0700` folders, `0600` files).
-2. **Meeting detection.** Every 2 seconds Said asks Core Audio which processes are currently using a microphone, and checks their bundle IDs against known meeting apps. It doesn't read window titles or browser tabs, and it needs no extra permission.
-3. **Transcription, on your Mac.** The audio goes through **Whisper large-v3 turbo**, an open speech-recognition model converted to Core ML. It runs on the Apple Neural Engine and GPU of your Mac, with no server involved. On an M-series Mac, 10 seconds of audio takes about 1.5 seconds. The result is saved as Markdown next to the audio.
-4. **The only network access** is downloading that model once (~630 MB from Hugging Face), when you click **Download transcription model** in the menu. After that the model loads from `~/Library/Application Support/Said/Models` with downloads switched off.
+  Said is signed with a local self-signed certificate kept in its own keychain (`~/.said/signing`, with a random password). Because of that, macOS remembers these permissions across updates.
+- **Installer.** It builds the newest release tag from source. It remembers which commit each release pointed to, and refuses to install a release that was later rewritten.
+- **Links.** `said://start`, `said://stop` and `said://toggle` work from Shortcuts, Raycast or Terminal (`open said://toggle`). Starting always asks for confirmation; stopping doesn't.
 
-### Permissions
+## For developers
 
-macOS asks for:
-
-- **Microphone**, to record your voice;
-- **System audio recording**, for meeting audio. This is not screen recording;
-- **Notifications**, for the silence and disk warnings.
-
-Said keeps these permissions across updates. It is signed with a local, self-signed certificate (“Said Local Signing”), kept in its own keychain at `~/.said/signing`. That keychain has a random password, stored in a file only you can read; your login keychain isn't touched. With ad-hoc signing, macOS would treat every new build as a different app and ask again.
-
-### URL scheme
-
-`said://start`, `said://stop` and `said://toggle` control recording from Shortcuts, Raycast, Alfred or Terminal (`open said://toggle`). Any app or web page can open these links, so **starting always asks for confirmation** in the pill. Stopping doesn't.
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for what Said does to protect recordings, its known limits, and how to report a problem.
-
-## Build from source
+Build and run:
 
 ```bash
 ./scripts/build-app.sh --open
@@ -91,50 +100,41 @@ Sources/Said/
   SaidApp.swift          menu bar app, URL handling
   MenuView.swift         menu contents
   PillPanel.swift        floating pills: recording and meeting prompt
-  Recorder.swift         recording state, files, silence and disk watch
-  MeetingDetector.swift  which meeting app is using the mic (Core Audio)
-  SystemAudioTap.swift   app or system audio (Core Audio process tap)
-  AudioMixer.swift       mixes mic + system audio into one .m4a
-  Transcriber.swift      WhisperKit: model download, transcription to .md
-  Notifier.swift         notifications with a Stop action
+  Recorder.swift         recording, files, silence and disk warnings
+  MeetingDetector.swift  which meeting app is using the mic
+  SystemAudioTap.swift   meeting or system audio (Core Audio process tap)
+  AudioMixer.swift       mixes mic + call audio into one .m4a
+  Transcriber.swift      WhisperKit: model download, transcription
+  Notifier.swift         notifications with a Stop button
   Localization.swift     L("…") lookup for translated text
-Resources/               Info.plist, AppIcon.icns, en.lproj, pl.lproj
+Resources/               Info.plist, icon, en.lproj, pl.lproj
 scripts/build-app.sh     builds and signs build/Said.app
-scripts/release.sh       cuts a release (tag + GitHub release)
-scripts/make-icon.swift  renders the app icon
-install.sh               one-line installer
-docs/                    website (GitHub Pages), English + Polish
+scripts/release.sh       cuts a release
+scripts/make-icon.swift  draws the app icon
+install.sh               the one-line installer
+docs/                    website (English + Polish)
 ```
 
-## Translations
+**Translations.** Text lives in `Resources/<language>.lproj/Localizable.strings`; the keys are the English text from the code. To add a language:
 
-UI text lives in `Resources/<language>.lproj/Localizable.strings`. The keys are the English strings used in the code (`L("Record")`). Permission prompts are in `InfoPlist.strings`. To add a language:
+1. Copy `pl.lproj` to `<code>.lproj` and translate it.
+2. Add the code to `CFBundleLocalizations` in `Info.plist`.
+3. Rebuild.
 
-1. Copy `Resources/pl.lproj` to `Resources/<code>.lproj` (e.g. `de.lproj`) and translate the right-hand side of each line.
-2. Add the code to `CFBundleLocalizations` in `Resources/Info.plist`.
-3. Rebuild with `./scripts/build-app.sh`.
+Pull requests are welcome.
 
-Pull requests with new languages are welcome.
+**Releases.** Said uses [SemVer](https://semver.org/).
 
-## Versioning
+1. Add a `## [X.Y.Z] - date` section to [CHANGELOG.md](CHANGELOG.md).
+2. Run `./scripts/release.sh X.Y.Z`.
 
-Said follows [SemVer](https://semver.org/). Changes are listed in [CHANGELOG.md](CHANGELOG.md), and the version is shown at the top of the menu.
+The script bumps the version, checks the build, tags, pushes and creates the GitHub release. When you release, also add a short entry to `docs/releases.html` and `docs/pl/releases.html`.
 
-To cut a release, add a `## [X.Y.Z] - date` section to `CHANGELOG.md`, then run:
+**Ideas for later:**
 
-```bash
-./scripts/release.sh X.Y.Z
-```
-
-It bumps the version in `Info.plist`, checks that the app builds, commits, tags `vX.Y.Z`, pushes, and creates the GitHub release.
-
-## Roadmap
-
-- Speaker labels (“You” vs “Others” from the two tracks)
-- Meeting notes (summary, decisions, tasks) from a local LLM (Ollama)
-- Global keyboard shortcut
-
-Please let people know when you record them.
+- labels for who is speaking (“you” vs “others”);
+- meeting notes from a local language model;
+- a global keyboard shortcut.
 
 ## License
 

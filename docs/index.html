@@ -6,16 +6,20 @@
 <title>Said</title>
 <meta name="description" content="Record your voice on a Mac and get the text. Everything stays on your computer.">
 <link rel="icon" href="icon.png">
-<link rel="alternate" hreflang="en" href="https://rajanbor.github.io/said/">
-<link rel="alternate" hreflang="pl" href="https://rajanbor.github.io/said/pl/">
 <style>
   body { margin: 0; background: #000; color: #fff;
          font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
-  main { max-width: 620px; margin: 0 auto; padding: 48px 16px 64px; }
-  nav { text-align: right; font-size: 14px; margin-bottom: 24px; }
+  main { max-width: 620px; margin: 0 auto; padding: 40px 16px 64px; }
+  nav { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 40px; }
+  nav a { color: #fff; }
+  nav .here { color: #888; }
   h1 { font-size: 28px; font-weight: 600; margin: 0 0 24px; }
   h2 { font-size: 17px; font-weight: 600; margin: 40px 0 8px; }
+  h3 { font-size: 17px; font-weight: 600; margin: 32px 0 4px; }
+  .date { color: #888; font-size: 14px; margin: 0 0 8px; }
   p { margin: 0 0 16px; }
+  ul { margin: 0 0 16px; padding-left: 20px; }
+  li { margin: 0 0 6px; }
   pre { margin: 0 0 16px; padding: 12px 0; overflow-x: auto;
         font: 14px/1.5 ui-monospace, Menlo, monospace; }
   code { font: 14px ui-monospace, Menlo, monospace; }
@@ -26,31 +30,50 @@
 </head>
 <body>
 <main>
-  <nav><a href="pl/" hreflang="pl" lang="pl">Polski</a></nav>
+  <nav><span><span class="here">Said</span> · <a href="releases.html">What's new</a></span><span><a href="pl/" lang="pl">Polski</a></span></nav>
   <h1>Said</h1>
-  <p>Said is a small Mac app for recording your voice. Click the icon in the menu bar, talk, click stop. A moment later you have the recording and its text.</p>
-
-  <p>Nothing goes to the internet. The recording and the text stay on your computer.</p>
+  <p>Said records what you say on your Mac and turns it into text. Click the icon at the top of the screen, talk, click stop. A moment later you have the recording and a transcript.</p>
+  <p>Nothing goes to the internet. Your recordings stay on your computer.</p>
 
   <h2>Install</h2>
   <p>Open Terminal, paste this line and press Return:</p>
   <pre id="cmd">curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash</pre>
   <p><button id="copy" type="button">Copy</button></p>
-  <p>It takes a few minutes. You need macOS 14 or newer. If your Mac asks to install Apple's developer tools, say yes and run the command again. Run the same command later to update.</p>
+  <p>It takes a few minutes the first time. You need macOS 14 or newer. If your Mac asks to install Apple's developer tools, say yes and run the command again. To update later, run the same command.</p>
 
-  <h2>How you use it</h2>
-  <p>Said lives in the menu bar next to the clock, not in the Dock. While you record, a small black pill with a timer and a stop button sits at the bottom of the screen. You can drag it anywhere.</p>
-  <p>When you join a call in Zoom, Teams or Google Meet, Said asks if you want to record it. It records you and the other people, and stops by itself when the call ends.</p>
-  <p>If nothing has been said for 2 minutes, you get a notification with a stop button. If your disk is getting full, Said warns you and saves the recording before space runs out.</p>
-  <p>Each recording gets its own folder in <code>Music/Said</code>, with the audio and a text file.</p>
+  <h2>Using it</h2>
+  <p><strong>Recording a thought.</strong> Click the Said icon in the menu bar and choose Record. A small black pill appears at the bottom of the screen with a timer and a stop button. Keep working; you can drag the pill wherever you like.</p>
+  <p><strong>Recording a call.</strong> When you join a call in Zoom, Teams or Google Meet, Said asks if you want to record it. It records you and the other people, even on headphones, and stops when the call ends.</p>
+  <p><strong>Finding your recordings.</strong> Each one gets its own folder in Music/Said, with the audio and a text file of everything that was said.</p>
+  <p><strong>If you forget to stop.</strong> After 2 minutes of silence you get a notification with a stop button. If your disk is getting full, Said warns you and saves the recording in time.</p>
+
+  <h2>Your privacy</h2>
+  <p>Recordings stay on your Mac. There's no cloud, no account and no tracking. Recording starts only when you click, and only you can open your recordings folder.</p>
+  <p>The internet is used once, to download the speech-recognition model (about 630 MB) when you click the button in the menu. After that Said works offline.</p>
 
   <h2>How it works</h2>
-  <p>Turning speech into text is done by Whisper, an open speech-recognition model. Said runs it on your Mac's own chip (the Neural Engine), the same way your Mac edits photos without a server. Ten seconds of audio takes about a second and a half.</p>
-  <p>The model is downloaded once, about 630 MB, when you click the button in the menu. That's the only time Said uses the internet. After that it works offline, in Polish, English and many other languages.</p>
-  <p>To tell that a call has started, Said only checks which app is using the microphone. It doesn't read your windows or browser tabs.</p>
+  <p>Said turns speech into text with Whisper, an openly available speech-recognition model. It runs on your Mac's own chip, the way your Mac edits photos without a server. Ten seconds of audio takes about a second and a half. It understands Polish, English and many other languages, and works out which one you're speaking by itself.</p>
+  <p>To notice that a call has started, Said only checks which app is using the microphone. It doesn't look at your screen, windows or browser tabs.</p>
+
+  <h2>What's new</h2>
+  <h3>Said 0.4.1</h3>
+  <p class="date">18 November 2026</p>
+  <ul>
+    <li>Links from other apps or web pages can no longer start a recording by themselves. Said now asks you first.</li>
+    <li>When recording a call, Said records only that call's sound. If it can't find it, it records just your microphone instead of everything your Mac plays.</li>
+    <li>If saving goes wrong, you no longer lose the recording. Said keeps the raw tracks.</li>
+    <li>Your recordings folder is now private to you. Other people using this Mac can't open it.</li>
+    <li>The installer notices if a release was tampered with after you installed it, and stops.</li>
+  </ul>
+  <h3>Said 0.4.0</h3>
+  <p class="date">18 November 2026</p>
+  <ul>
+    <li>Said speaks English, and Polish for Polish systems. It follows your Mac's language.</li>
+  </ul>
+  <p><a href="releases.html">All versions</a></p>
 
   <h2>Code</h2>
-  <p>Said is free and open source (MIT license). Code: <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
+  <p>Said is free and open source (MIT license): <a href="https://github.com/rajanbor/said">github.com/rajanbor/said</a></p>
 </main>
 <script>
   document.getElementById('copy').addEventListener('click', async (e) => {
