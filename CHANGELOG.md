@@ -2,6 +2,18 @@
 
 Said follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-11-18
+
+Security fixes from an audit of 0.4.0.
+
+- **`said://start` and `said://toggle` no longer record by themselves.** Any app or web page can open these links, so they now show a “Start recording?” pill you have to click. The pill ignores clicks for its first 0.7 s. `said://stop` is unchanged.
+- **No silent widening to all system audio.** If the meeting app's audio can't be found, Said records the microphone only and tells you. It no longer falls back to everything the Mac plays.
+- **No lost recordings on save errors.** Temporary tracks are deleted only after the final file is confirmed playable. If mixing or moving fails, the tracks are kept.
+- **Private files.** `~/Music/Said` and recording folders are `0700`; audio and transcripts are `0600`.
+- **Signing key.** The local signing keychain uses a random password stored in a `0600` file instead of a fixed one, and existing keychains are migrated. Temporary key files are removed on any exit (`trap`), and the build runs with `umask 077`.
+- **Installer.** It remembers which commit each release tag pointed to and refuses to install if an installed release is rewritten. It prints the commit it builds and keeps `~/.said` private.
+- Added `SECURITY.md`.
+
 ## [0.4.0] - 2026-11-18
 
 - **English interface.** The app is now in English, with a Polish translation. Said follows your system language.

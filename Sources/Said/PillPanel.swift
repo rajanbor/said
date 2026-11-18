@@ -128,15 +128,15 @@ struct MeetingPromptView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "person.2.wave.2.fill")
+            Image(systemName: recorder.promptIsExternal ? "link" : "person.2.wave.2.fill")
                 .font(.system(size: 11))
                 .foregroundStyle(Color.white.opacity(0.7))
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(recorder.promptMeeting?.name ?? L("Meeting"))
+                Text(recorder.promptIsExternal ? L("Start recording?") : (recorder.promptMeeting?.name ?? L("Meeting")))
                     .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
-                Text(L("Record and transcribe?"))
+                Text(recorder.promptIsExternal ? L("Requested by another app") : L("Record and transcribe?"))
                     .font(.system(size: 11))
                     .foregroundStyle(Color.white.opacity(0.6))
             }

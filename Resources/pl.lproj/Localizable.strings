@@ -51,3 +51,6 @@
 "Try again" = "Spróbuj ponownie";
 "Unsupported system audio format." = "Nieobsługiwany format dźwięku systemowego.";
 "Your disk is almost full (%@ left). The recording has been saved." = "Kończy się miejsce na dysku (zostało %@). Nagranie zostało zapisane.";
+"Couldn't find %@ audio. Recording the microphone only." = "Nie znaleziono dźwięku aplikacji %@. Nagrywam tylko mikrofon.";
+"Start recording?" = "Rozpocząć nagrywanie?";
+"Requested by another app" = "Prośba z innej aplikacji";

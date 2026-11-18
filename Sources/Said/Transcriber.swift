@@ -114,6 +114,7 @@ final class Transcriber: ObservableObject {
             let md = Self.markdown(for: rec, segments: segments, language: language)
             let url = rec.url.deletingPathExtension().appendingPathExtension("md")
             try md.write(to: url, atomically: true, encoding: .utf8)
+            Recorder.secured(url)
             return url
         } catch {
             state = .failed(L("Transcription failed: %@", error.localizedDescription))

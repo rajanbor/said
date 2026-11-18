@@ -20,12 +20,21 @@ cp -R Resources/*.lproj "$APP/Contents/Resources/"   # translations (en, pl)
 
 SIGN_DIR="$HOME/.said/signing"
 KC="$SIGN_DIR/said-signing.keychain-db"
-KC_PW="said-local-signing"   # protects only this local, self-signed signing key
+PW_FILE="$SIGN_DIR/keychain-password"     # random, created once, readable by you only (0600)
+LEGACY_PW="said-local-signing"            # fixed password used by Said <= 0.4.0
 ID_NAME="Said Local Signing"
 
+# Anything created here is private to this user, and temp files go away on any exit.
+umask 077
+TMP_DIR=""
+trap '[[ -n "$TMP_DIR" ]] && rm -rf "$TMP_DIR"' EXIT
+
+random_password() { /usr/bin/openssl rand -hex 32; }
+
 make_identity() {
-  local tmp; tmp="$(mktemp -d)"
-  cat > "$tmp/cert.cnf" <<CNF
+  TMP_DIR="$(mktemp -d)"
+  local kc_pw; kc_pw="$(random_password)"
+  cat > "$TMP_DIR/cert.cnf" <<CNF
 [req]
 distinguished_name = dn
 x509_extensions = ext
@@ -37,23 +46,39 @@ basicConstraints = critical,CA:false
 keyUsage = critical,digitalSignature
 extendedKeyUsage = critical,codeSigning
 CNF
+  # The unencrypted key exists only inside TMP_DIR (0700) and is removed by the trap.
   # /usr/bin/openssl (LibreSSL) writes a PKCS#12 that macOS `security` can import.
-  /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 7300 -config "$tmp/cert.cnf" \
-    -keyout "$tmp/key.pem" -out "$tmp/cert.pem" 2>/dev/null
-  /usr/bin/openssl pkcs12 -export -inkey "$tmp/key.pem" -in "$tmp/cert.pem" \
-    -out "$tmp/id.p12" -passout pass:"$KC_PW" -name "$ID_NAME"
+  /usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -days 7300 -config "$TMP_DIR/cert.cnf" \
+    -keyout "$TMP_DIR/key.pem" -out "$TMP_DIR/cert.pem" 2>/dev/null
+  /usr/bin/openssl pkcs12 -export -inkey "$TMP_DIR/key.pem" -in "$TMP_DIR/cert.pem" \
+    -out "$TMP_DIR/id.p12" -passout pass:"$kc_pw" -name "$ID_NAME"
   mkdir -p "$SIGN_DIR"
-  security create-keychain -p "$KC_PW" "$KC"
+  chmod 700 "$SIGN_DIR"
+  security create-keychain -p "$kc_pw" "$KC"
   security set-keychain-settings "$KC"   # no auto-lock
-  security unlock-keychain -p "$KC_PW" "$KC"
-  security import "$tmp/id.p12" -k "$KC" -P "$KC_PW" -T /usr/bin/codesign >/dev/null
-  security set-key-partition-list -S apple-tool:,apple: -s -k "$KC_PW" "$KC" >/dev/null
-  rm -rf "$tmp"
+  security unlock-keychain -p "$kc_pw" "$KC"
+  security import "$TMP_DIR/id.p12" -k "$KC" -P "$kc_pw" -T /usr/bin/codesign >/dev/null
+  security set-key-partition-list -S apple-tool:,apple: -s -k "$kc_pw" "$KC" >/dev/null
+  printf '%s' "$kc_pw" > "$PW_FILE"
+  chmod 600 "$PW_FILE" "$KC"
+  rm -rf "$TMP_DIR"; TMP_DIR=""
+}
+
+# Keychains made by Said <= 0.4.0 used a fixed password: switch them to a random one.
+migrate_password() {
+  [[ -f "$KC" && ! -f "$PW_FILE" ]] || return 0
+  local kc_pw; kc_pw="$(random_password)"
+  security set-keychain-password -o "$LEGACY_PW" -p "$kc_pw" "$KC"
+  printf '%s' "$kc_pw" > "$PW_FILE"
+  chmod 600 "$PW_FILE" "$KC"
+  chmod 700 "$SIGN_DIR"
 }
 
 sign_stable() {
   [[ -f "$KC" ]] || make_identity
-  security unlock-keychain -p "$KC_PW" "$KC"
+  migrate_password
+  chmod 700 "$SIGN_DIR"; chmod 600 "$KC" "$PW_FILE"
+  security unlock-keychain -p "$(cat "$PW_FILE")" "$KC"
   codesign --force --keychain "$KC" --sign "$ID_NAME" "$APP"
 }
 

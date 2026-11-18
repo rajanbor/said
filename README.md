@@ -14,7 +14,7 @@ Paste into Terminal:
 curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | bash
 ```
 
-The script downloads the latest release into `~/.said/src`, builds the app on your Mac and installs `Said.app` into `/Applications`. If `/Applications` isn't writable, it uses `~/Applications`. You need macOS 14 or later and the Xcode Command Line Tools; the script offers to install them. Run the same command again to update.
+The script downloads the latest release into `~/.said/src`, checks that the release wasn't rewritten since you last installed it, builds the app on your Mac and installs `Said.app` into `/Applications`. If `/Applications` isn't writable, it uses `~/Applications`. You need macOS 14 or later and the Xcode Command Line Tools; the script offers to install them. Run the same command again to update.
 
 To install the latest code from `main` instead of the newest release:
 
@@ -49,7 +49,7 @@ rm -rf /Applications/Said.app ~/.said "$HOME/Library/Application Support/Said"
 
 Said is a native Swift app (SwiftUI + AppKit). It uses only Apple frameworks plus [WhisperKit](https://github.com/argmaxinc/WhisperKit).
 
-1. **Recording.** The microphone is recorded with `AVAudioRecorder`. For meetings, a Core Audio **process tap** (macOS 14.2+) captures only the meeting app's audio, encoded to AAC on the fly. After you stop, both tracks are mixed into one `.m4a`.
+1. **Recording.** The microphone is recorded with `AVAudioRecorder`. For meetings, a Core Audio **process tap** (macOS 14.2+) captures only the meeting app's audio, encoded to AAC on the fly. If that app's audio can't be found, Said records the microphone only and never falls back to everything the Mac plays. After you stop, both tracks are mixed into one `.m4a`. The temporary tracks are deleted only once the final file is confirmed playable. Recordings are readable by your user only (`0700` folders, `0600` files).
 2. **Meeting detection.** Every 2 seconds Said asks Core Audio which processes are currently using a microphone, and checks their bundle IDs against known meeting apps. It doesn't read window titles or browser tabs, and it needs no extra permission.
 3. **Transcription, on your Mac.** The audio goes through **Whisper large-v3 turbo**, an open speech-recognition model converted to Core ML. It runs on the Apple Neural Engine and GPU of your Mac, with no server involved. On an M-series Mac, 10 seconds of audio takes about 1.5 seconds. The result is saved as Markdown next to the audio.
 4. **The only network access** is downloading that model once (~630 MB from Hugging Face), when you click **Download transcription model** in the menu. After that the model loads from `~/Library/Application Support/Said/Models` with downloads switched off.
@@ -62,11 +62,15 @@ macOS asks for:
 - **System audio recording**, for meeting audio. This is not screen recording;
 - **Notifications**, for the silence and disk warnings.
 
-Said keeps these permissions across updates. It is signed with a local, self-signed certificate (“Said Local Signing”), kept in its own keychain at `~/.said/signing`; your login keychain isn't touched. With ad-hoc signing, macOS would treat every new build as a different app and ask again.
+Said keeps these permissions across updates. It is signed with a local, self-signed certificate (“Said Local Signing”), kept in its own keychain at `~/.said/signing`. That keychain has a random password, stored in a file only you can read; your login keychain isn't touched. With ad-hoc signing, macOS would treat every new build as a different app and ask again.
 
 ### URL scheme
 
-`said://start`, `said://stop` and `said://toggle` control recording from Shortcuts, Raycast, Alfred or Terminal (`open said://toggle`).
+`said://start`, `said://stop` and `said://toggle` control recording from Shortcuts, Raycast, Alfred or Terminal (`open said://toggle`). Any app or web page can open these links, so **starting always asks for confirmation** in the pill. Stopping doesn't.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for what Said does to protect recordings, its known limits, and how to report a problem.
 
 ## Build from source
 

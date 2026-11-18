@@ -40,6 +40,8 @@ final class Recorder: ObservableObject {
 
     /// Meeting that is currently offered for recording (drives the prompt pill).
     @Published private(set) var promptMeeting: MeetingDetector.Meeting?
+    /// The prompt pill is asking to confirm a said://start request from another app.
+    @Published private(set) var promptIsExternal = false
 
     let transcriber = Transcriber()
     let meetings = MeetingDetector()
@@ -52,7 +54,7 @@ final class Recorder: ObservableObject {
     private struct Session {
         let final: URL      // <stamp>/said_<stamp>.m4a
         let mic: URL        // <stamp>/.mic.m4a
-        let system: URL?    // <stamp>/.system.caf
+        let system: URL?    // <stamp>/.system.m4a
     }
     private var session: Session?
 
@@ -79,6 +81,8 @@ final class Recorder: ObservableObject {
     /// Set when recording was started from the meeting prompt: the call ending stops it.
     private var recordingMeeting: MeetingDetector.Meeting?
     private var promptTimeout: Task<Void, Never>?
+    /// Clicks on the prompt are ignored for a moment after it appears (no click-through).
+    private var promptShownAt = Date.distantPast
 
     private lazy var pill = FloatingPanel(size: NSSize(width: 196, height: 38)) {
         PillView().environmentObject(self)
@@ -99,6 +103,8 @@ final class Recorder: ObservableObject {
            FileManager.default.fileExists(atPath: rec.path) {
             last = rec
         }
+        // Lock down the recordings folder (also for recordings made by older versions).
+        if FileManager.default.fileExists(atPath: Self.folder.path) { try? Self.secureDirectory(Self.folder) }
         meetings.onStart = { [weak self] in self?.meetingStarted($0) }
         meetings.onEnd = { [weak self] in self?.meetingEnded($0) }
     }
@@ -107,7 +113,21 @@ final class Recorder: ObservableObject {
 
     private func meetingStarted(_ meeting: MeetingDetector.Meeting) {
         guard !isRecording else { return }
+        promptIsExternal = false
         promptMeeting = meeting
+        showPrompt()
+    }
+
+    /// said://start from another app or a web page: never record silently, ask first.
+    private func requestExternalStart() {
+        guard !isRecording else { return }
+        promptMeeting = nil
+        promptIsExternal = true
+        showPrompt()
+    }
+
+    private func showPrompt() {
+        promptShownAt = Date()
         prompt.show()
         // Don't nag: the offer disappears on its own after 30 s.
         promptTimeout?.cancel()
@@ -124,6 +144,7 @@ final class Recorder: ObservableObject {
     }
 
     func acceptMeetingPrompt() {
+        guard Date().timeIntervalSince(promptShownAt) > 0.7 else { return }
         let meeting = promptMeeting
         dismissMeetingPrompt()
         recordingMeeting = meeting
@@ -134,6 +155,7 @@ final class Recorder: ObservableObject {
         promptTimeout?.cancel()
         promptTimeout = nil
         promptMeeting = nil
+        promptIsExternal = false
         prompt.hide()
     }
 
@@ -185,20 +207,55 @@ final class Recorder: ObservableObject {
         }
     }
 
-    /// Mixes mic + system audio into the final .m4a (or just keeps the mic) and removes temp files.
+    /// Mixes mic + system audio into the final .m4a (or keeps just the mic).
+    /// Temporary tracks are deleted only after the final file is confirmed playable;
+    /// if anything fails, the tracks are kept as visible files instead of being lost.
     private static func finish(_ s: Session) async -> URL {
         let fm = FileManager.default
-        defer {
-            try? fm.removeItem(at: s.mic)
-            if let system = s.system { try? fm.removeItem(at: system) }
+        if let system = s.system {
+            let size = (try? fm.attributesOfItem(atPath: system.path)[.size] as? Int) ?? 0
+            if size > 16 * 1024 {
+                if await AudioMixer.mix([s.mic, system], into: s.final), await isPlayable(s.final) {
+                    try? fm.removeItem(at: s.mic)
+                    try? fm.removeItem(at: system)
+                    return secured(s.final)
+                }
+                // Mixing failed: keep the call audio next to the recording.
+                try? fm.removeItem(at: s.final)
+                let systemCopy = s.final.deletingPathExtension().appendingPathExtension("system.m4a")
+                if (try? fm.moveItem(at: system, to: systemCopy)) != nil { _ = secured(systemCopy) }
+            } else {
+                try? fm.removeItem(at: system)   // practically empty: nothing was played
+            }
         }
-        if let system = s.system,
-           let size = try? fm.attributesOfItem(atPath: system.path)[.size] as? Int, size > 16 * 1024,
-           await AudioMixer.mix([s.mic, system], into: s.final) {
-            return s.final
+        do {
+            try fm.moveItem(at: s.mic, to: s.final)
+            return secured(s.final)
+        } catch {
+            return secured(s.mic)   // keep the temporary file rather than lose the recording
         }
-        try? fm.moveItem(at: s.mic, to: s.final)
-        return s.final
+    }
+
+    private static func isPlayable(_ url: URL) async -> Bool {
+        guard let duration = try? await AVURLAsset(url: url).load(.duration) else { return false }
+        return duration.seconds > 0
+    }
+
+    /// Recordings are readable by this user only (0600).
+    @discardableResult
+    static func secured(_ url: URL) -> URL {
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        return url
+    }
+
+    /// Creates `url` (and ~/Music/Said) as directories only this user can open (0700).
+    static func secureDirectory(_ url: URL) throws {
+        let fm = FileManager.default
+        for dir in [folder, url] {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true,
+                                   attributes: [.posixPermissions: 0o700])
+            try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        }
     }
 
     /// Runs local transcription for the last recording (automatic when the model is installed).
@@ -231,13 +288,12 @@ final class Recorder: ObservableObject {
         diskWarned = false
         notice = nil
         do {
-            try FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
             // One folder per recording: <stamp>/said_<stamp>.m4a (+ .md transcript later).
             let fmt = DateFormatter()
             fmt.dateFormat = "yyyy-MM-dd_HH-mm-ss"
             let stamp = fmt.string(from: Date())
             let dir = Self.folder.appendingPathComponent(stamp, isDirectory: true)
-            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try Self.secureDirectory(dir)
             let final = dir.appendingPathComponent("said_\(stamp).m4a")
             let url = dir.appendingPathComponent(".mic.m4a")
 
@@ -275,7 +331,12 @@ final class Recorder: ObservableObject {
         let scope: SystemAudioTap.Scope
         if let meeting = recordingMeeting {
             let ids = MeetingDetector.processObjects(bundlePrefix: meeting.bundleID)
-            scope = ids.isEmpty ? .everything : .processes(ids)
+            // Fail closed: never widen a meeting recording to everything the Mac plays.
+            guard !ids.isEmpty else {
+                notice = L("Couldn't find %@ audio. Recording the microphone only.", meeting.name)
+                return nil
+            }
+            scope = .processes(ids)
         } else if recordSystemAudio {
             scope = .everything
         } else {
@@ -365,13 +426,15 @@ final class Recorder: ObservableObject {
     }
 
     // MARK: - URL scheme (said://start, said://stop, said://toggle) — Shortcuts, Raycast…
+    // Any app or web page can open these URLs, so starting always asks for confirmation
+    // in the prompt pill. Stopping needs none: it can only end a recording, never start one.
 
     func handle(_ url: URL) {
         guard url.scheme == "said" else { return }
         switch url.host {
-        case "start": start()
+        case "start": requestExternalStart()
         case "stop": stop()
-        case "toggle": toggle()
+        case "toggle": isRecording ? stop() : requestExternalStart()
         default: break
         }
     }
@@ -385,7 +448,7 @@ final class Recorder: ObservableObject {
 
     /// Opens ~/Music/Said (all recordings and transcripts) in Finder.
     func openFolder() {
-        try? FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
+        try? Self.secureDirectory(Self.folder)
         NSWorkspace.shared.open(Self.folder)
     }
 
