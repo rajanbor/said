@@ -78,6 +78,7 @@ Said is a native Swift app (SwiftUI + AppKit). Apart from [WhisperKit](https://g
   - The model is **Whisper large-v3 turbo**, converted to Core ML and quantized to about 630 MB. It runs on the Neural Engine and GPU.
   - The model is downloaded only when you click the button. After that it loads with downloads switched off.
   - The transcript is Markdown with timestamps.
+  - Whisper tends to invent text for silence ("Thank you for watching", "Спасибо"). Said measures the loudness under each segment and drops the ones without speech, with a stricter level for those typical phrases. The language is taken from the parts with the most speech.
 - **Permissions.** macOS asks for:
   - the microphone;
   - system audio recording, for calls (this isn't screen recording);
