@@ -2,6 +2,16 @@
 
 Said follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.4] - 2026-11-18
+
+- **Summaries.** Said can put a short summary at the top of each transcript: what it was about, the key points, decisions and who does what next. It's written on your Mac by a small open model run with llama.cpp. Pick the model in the menu under **Summaries** and click **Download summary model**:
+  - **Bielik 4.5B** (2.9 GB) if you mostly speak Polish;
+  - **Qwen3 4B** (2.5 GB) for Polish and English mixed, or mostly English;
+  - **Qwen3 1.7B** (1.1 GB) if you want it light.
+
+  You can also choose it at install: `curl -fsSL https://raw.githubusercontent.com/rajanbor/said/main/install.sh | SAID_SUMMARY=bielik bash`. The model is downloaded only when you click, and is checked against a SHA-256 hash before it's used. Transcripts of only a few words get no summary.
+- **Fix: no more made-up text in silence.** Whisper used to write phrases like "Thank you for watching" or "Спасибо" for quiet parts of a recording. Said now drops segments without speech, measured by loudness, and takes the language from the parts where people actually talk.
+
 ## [0.4.3] - 2026-11-18
 
 - Every new recording starts with the pill at the bottom centre of the screen. You can still drag it anywhere while recording, but Said no longer keeps that spot for the next recording.
