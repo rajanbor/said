@@ -87,6 +87,7 @@
   <h2>Using it</h2>
   <p><strong>Recording a thought.</strong> Click the Said icon in the menu bar and choose Record. A small black pill appears at the bottom of the screen with a timer and a stop button. Keep working; you can drag the pill wherever you like.</p>
   <p><strong>Recording a call.</strong> When you join a call in Zoom, Teams or Google Meet, Said asks if you want to record it. It records you and the other people, even on headphones, and stops when the call ends.</p>
+  <p><strong>When it's done.</strong> A card appears under the menu bar with what was just saved and what Said is still doing with it: transcribing, writing the summary. It disappears on its own, and comes back with an Open button when the transcript is ready.</p>
   <p><strong>Finding your recordings.</strong> Each one gets its own folder in Music/Said, with the audio and a text file of everything that was said.</p>
   <p><strong>Summaries.</strong> Said can also put a short summary at the top of each transcript: what it was about, the key points, decisions, and who does what next. In the menu, under Summaries, pick a model and click Download summary model. From then on every transcript gets a summary by itself. It's written on your Mac, like the transcript.</p>
   <p><strong>If you forget to stop.</strong> After 2 minutes of silence you get a notification with a stop button. If your disk is getting full, Said warns you and saves the recording in time.</p>
@@ -115,18 +116,20 @@
   <section>
   <h2>What's new</h2>
   <div class="release">
+  <h3>Said 0.5.0</h3>
+  <p class="date">26 November 2026</p>
+  <ul>
+    <li>When a recording ends, a card appears under the menu bar: what was saved, and what Said is still doing with it — transcribing, writing the summary. It comes back with an Open button when the transcript is ready.</li>
+    <li>Said uses almost nothing while you are not recording: no processor time and about 15 MB, instead of 5% of a processor core and 220 MB.</li>
+    <li>Less waiting after a long recording: the transcription model is loaded while you are still recording, and the work no longer runs at the slow pace macOS gives to apps in the background.</li>
+  </ul>
+  </div>
+  <div class="release">
   <h3>Said 0.4.4</h3>
   <p class="date">18 November 2026</p>
   <ul>
     <li>Summaries: Said can put a short summary at the top of each transcript, with the key points, decisions and who does what next. It's written on your Mac. Pick a model in the menu under Summaries.</li>
     <li>Silent parts of a recording no longer turn into made-up text like "Thank you for watching".</li>
-  </ul>
-  </div>
-  <div class="release">
-  <h3>Said 0.4.3</h3>
-  <p class="date">18 November 2026</p>
-  <ul>
-    <li>Each new recording starts with the pill back at the bottom of the screen, wherever you dragged it last time.</li>
   </ul>
   </div>
   <p><a href="releases.html">All versions</a></p>

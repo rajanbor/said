@@ -2,6 +2,12 @@
 
 Said follows [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-26
+
+- **A card when the recording ends.** Stop a recording and a small card appears under the menu bar: what was saved, and what Said is still doing with it — saving, transcribing (with how far it has got), writing the summary. It goes away by itself, waits while the pointer is on it, and when the transcript is ready it comes back with a button that opens it.
+- **Less waiting after a long recording.** The transcription model is now loaded while you are still recording, so nothing has to wait for it when you stop, and transcribing no longer runs at the slow pace macOS gives to apps in the background. The transcription itself is as fast as the Neural Engine can go: a 25-minute recording takes a bit under two minutes, and the card and the menu now show how far it has got instead of just spinning.
+- **Almost nothing while Said sits idle.** A hidden recording pill kept its animation running, which redrew it off-screen about 60 times a second and cost around 5% of a CPU core for as long as Said was open; hidden panels now let go of their contents. Meetings are noticed through Core Audio notifications instead of a check every two seconds, and the transcription model (about 220 MB) is only in memory while it is needed — from the start of a recording until a little after the transcript is written — instead of from launch onwards.
+
 ## [0.4.4] - 2026-11-18
 
 - **Summaries.** Said can put a short summary at the top of each transcript: what it was about, the key points, decisions and who does what next. It's written on your Mac by a small open model run with llama.cpp. Pick the model in the menu under **Summaries** and click **Download summary model**:
