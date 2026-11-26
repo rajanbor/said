@@ -2,6 +2,10 @@
 
 Said follows [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-11-26
+
+- **Fix: macOS stops asking for the microphone after every update.** Said is signed with a local, self-signed identity so that macOS sees the same app across updates, but the signature silently fell back to ad-hoc: `codesign` looks for a signing identity in the keychain search list only, and `--keychain <path>` does not reach it, so the identity in `~/.said/signing` was never found. The build now adds that keychain to the search list for the two signatures and puts the list back exactly as it was (also when the build is interrupted). It also no longer trusts `security find-identity -v` to decide whether there is anything to sign with: that command lists only identities with a trusted chain, so it reports none for a self-signed one that signs fine. A keychain that really cannot sign is made again instead of falling through to ad-hoc. One more microphone prompt is expected after this update, because the certificate was recreated while tracking this down.
+
 ## [0.5.0] - 2026-11-26
 
 - **A card when the recording ends.** Stop a recording and a small card appears under the menu bar: what was saved, and what Said is still doing with it — saving, transcribing (with how far it has got), writing the summary. It goes away by itself, waits while the pointer is on it, and when the transcript is ready it comes back with a button that opens it.
