@@ -31,7 +31,14 @@ ID_NAME="Said Local Signing"
 # Anything created here is private to this user, and temp files go away on any exit.
 umask 077
 TMP_DIR=""
-trap '[[ -n "$TMP_DIR" ]] && rm -rf "$TMP_DIR"' EXIT
+SAVED_LIST=()     # the keychain search list to put back while ours is added to it
+LIST_CHANGED=""
+cleanup() {
+  [[ -z "$TMP_DIR" ]] || rm -rf "$TMP_DIR"
+  [[ -z "$LIST_CHANGED" ]] || security list-keychains -d user -s "${SAVED_LIST[@]}" >/dev/null 2>&1
+  return 0
+}
+trap cleanup EXIT
 
 random_password() { /usr/bin/openssl rand -hex 32; }
 
@@ -68,6 +75,14 @@ CNF
   rm -rf "$TMP_DIR"; TMP_DIR=""
 }
 
+# Starts the keychain over. Used when there is nothing to sign with, which would otherwise
+# mean an ad-hoc signature and macOS asking for the microphone again on every update.
+reset_keychain() {
+  [[ ! -f "$KC" ]] || security delete-keychain "$KC" >/dev/null 2>&1 || rm -f "$KC"
+  rm -f "$PW_FILE"
+  make_identity
+}
+
 # Keychains made by Said <= 0.4.0 used a fixed password: switch them to a random one.
 migrate_password() {
   [[ -f "$KC" && ! -f "$PW_FILE" ]] || return 0
@@ -78,13 +93,50 @@ migrate_password() {
   chmod 700 "$SIGN_DIR"
 }
 
-sign_stable() {
-  [[ -f "$KC" ]] || make_identity
-  migrate_password
+# Is our certificate in there at all? (`security find-identity` can't be used: it only lists
+# identities with a trusted chain, so it reports none for a self-signed one that signs fine.)
+has_certificate() {
+  [[ -f "$KC" && -f "$PW_FILE" ]] || return 1
+  security unlock-keychain -p "$(cat "$PW_FILE")" "$KC" >/dev/null 2>&1 || return 1
+  security find-certificate -c "$ID_NAME" "$KC" >/dev/null 2>&1
+}
+
+# codesign looks for the signing identity in the keychain search list and nowhere else:
+# `--keychain <path>` does not reach it. So ours joins the list for the two signatures,
+# and the list is put back exactly as it was (also by the trap, if this is interrupted).
+try_sign() {
   chmod 700 "$SIGN_DIR"; chmod 600 "$KC" "$PW_FILE"
-  security unlock-keychain -p "$(cat "$PW_FILE")" "$KC"
-  codesign --force --keychain "$KC" --sign "$ID_NAME" "$APP/Contents/Frameworks/llama.framework"
-  codesign --force --keychain "$KC" --sign "$ID_NAME" "$APP"
+  security unlock-keychain -p "$(cat "$PW_FILE")" "$KC" || return 1
+
+  SAVED_LIST=()
+  local line
+  while IFS= read -r line; do
+    line="${line#"${line%%[![:space:]]*}"}"   # trim leading spaces
+    line="${line%\"}"; line="${line#\"}"      # and the quotes security prints
+    [[ -z "$line" ]] || SAVED_LIST+=("$line")
+  done < <(security list-keychains -d user)
+  [[ ${#SAVED_LIST[@]} -gt 0 ]] || return 1
+
+  LIST_CHANGED=1
+  security list-keychains -d user -s "${SAVED_LIST[@]}" "$KC" || { LIST_CHANGED=""; return 1; }
+  local status=0
+  codesign --force --keychain "$KC" --sign "$ID_NAME" "$APP/Contents/Frameworks/llama.framework" || status=1
+  [[ $status -ne 0 ]] || codesign --force --keychain "$KC" --sign "$ID_NAME" "$APP" || status=1
+  security list-keychains -d user -s "${SAVED_LIST[@]}"
+  LIST_CHANGED=""
+  return $status
+}
+
+sign_stable() {
+  # If the migration fails (a keychain whose password is neither the old nor the stored one),
+  # has_certificate says no and the keychain is made again.
+  migrate_password || true
+  has_certificate || reset_keychain
+  try_sign && return 0
+  # There is a certificate but it can't sign: its private key is gone, or the keychain came
+  # from another Mac. One new identity, one more try.
+  reset_keychain
+  try_sign
 }
 
 if sign_stable >/dev/null 2>&1; then
