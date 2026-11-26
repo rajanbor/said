@@ -153,6 +153,11 @@ final class Summarizer: ObservableObject {
         guard parsed.wordCount >= Self.minimumWords else { return true }
 
         state = .summarizing(nil)
+        // Said is a menu bar app and so always in the background, where macOS would otherwise
+        // slow this work down (App Nap). Idle sleep is still allowed.
+        let activity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep, reason: "Writing a summary")
+        defer { ProcessInfo.processInfo.endActivity(activity) }
         let path = model.file.path
         let language = parsed.languageName
         let report: @Sendable (Int, Int) -> Void = { done, total in

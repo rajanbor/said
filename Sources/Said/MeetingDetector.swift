@@ -6,6 +6,11 @@ import Foundation
 /// Uses Core Audio's per-process info (macOS 14+): which processes are currently
 /// capturing audio input, and their bundle IDs. No extra permission, no network,
 /// no window titles — just "is a known meeting app recording from a mic right now".
+///
+/// Nothing is polled: Core Audio tells Said when a process starts or stops using the
+/// microphone, so a Said that isn't recording does no work at all. A slow safety net
+/// (once a minute, with a wide tolerance so macOS folds it into other wake-ups) covers
+/// the rare case of a change that arrives without a notification.
 @MainActor
 final class MeetingDetector: ObservableObject {
     struct Meeting: Equatable {
@@ -27,10 +32,20 @@ final class MeetingDetector: ObservableObject {
     var onEnd: ((Meeting) -> Void)?
 
     private static let enabledKey = "detectMeetings"
-    private var timer: Timer?
-    private var seenStreak = 0
-    private var goneStreak = 0
-    private var candidate: Meeting?
+    /// A change has to last this long to count, so quick mic tests and blips are ignored.
+    private static let debounce: TimeInterval = 3
+    private static let safetyNet: TimeInterval = 60
+
+    private let queue = DispatchQueue(label: "said.meeting-detector")
+    private struct Watcher {
+        let object: AudioObjectID
+        var address: AudioObjectPropertyAddress
+        let block: AudioObjectPropertyListenerBlock
+    }
+    /// Core Audio listeners in place, so they can be removed again.
+    private var watchers: [Watcher] = []
+    private var settling: Task<Void, Never>?
+    private var net: Timer?
 
     /// Bundle ID prefix → name shown to the user. Helper processes share the prefix
     /// (e.g. com.google.Chrome.helper), which is where browsers capture the mic.
@@ -55,43 +70,93 @@ final class MeetingDetector: ObservableObject {
         if isEnabled { start() }
     }
 
+    // MARK: - Watching
+
     private func start() {
-        guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.poll() }
+        guard watchers.isEmpty, net == nil else { return }
+        watch(AudioObjectID(kAudioObjectSystemObject), kAudioHardwarePropertyProcessObjectList)
+        watchProcesses()
+        // Catches anything the notifications miss. The tolerance lets macOS run it together
+        // with other timers instead of waking the Mac on its own.
+        let timer = Timer(timeInterval: Self.safetyNet, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.settleSoon() }
         }
+        timer.tolerance = Self.safetyNet / 2
+        RunLoop.main.add(timer, forMode: .common)
+        net = timer
+        settleSoon()
     }
 
     private func stop() {
-        timer?.invalidate()
-        timer = nil
+        settling?.cancel()
+        settling = nil
+        net?.invalidate()
+        net = nil
+        remove { _ in true }
         if let active { self.active = nil; onEnd?(active) }
-        seenStreak = 0; goneStreak = 0; candidate = nil
     }
 
-    private func poll() {
+    /// Listens for `selector` on `object`, and remembers it so it can be removed again.
+    private func watch(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector) {
+        var address = Self.address(selector)
+        let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            Task { @MainActor in self?.changed(selector) }
+        }
+        guard AudioObjectAddPropertyListenerBlock(object, &address, queue, block) == noErr else { return }
+        watchers.append(Watcher(object: object, address: address, block: block))
+    }
+
+    private func remove(where matches: (Watcher) -> Bool) {
+        for watcher in watchers where matches(watcher) {
+            var address = watcher.address
+            AudioObjectRemovePropertyListenerBlock(watcher.object, &address, queue, watcher.block)
+        }
+        watchers.removeAll(where: matches)
+    }
+
+    /// One listener per process that uses audio, for "is it recording from a mic now".
+    /// Processes come and go, so listeners follow the current list.
+    private func watchProcesses() {
+        let processes = Set(Self.processObjects())
+        remove { $0.address.mSelector == kAudioProcessPropertyIsRunningInput && !processes.contains($0.object) }
+        let listed = Set(watchers.map(\.object))
+        for process in processes where !listed.contains(process) {
+            watch(process, kAudioProcessPropertyIsRunningInput)
+        }
+    }
+
+    private func changed(_ selector: AudioObjectPropertySelector) {
+        // A new process started using audio: watch its microphone too.
+        if selector == kAudioHardwarePropertyProcessObjectList { watchProcesses() }
+        settleSoon()
+    }
+
+    /// Looks again once things have been quiet for `debounce` seconds.
+    private func settleSoon() {
+        settling?.cancel()
+        settling = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.debounce))
+            guard !Task.isCancelled else { return }
+            self?.settle()
+        }
+    }
+
+    private func settle() {
+        settling = nil
         let now = Self.meetingUsingMic()
-        if let now {
-            goneStreak = 0
-            seenStreak = (now == candidate) ? seenStreak + 1 : 1
-            candidate = now
-            // ~4 s of continuous use: ignore quick mic tests and blips.
-            if active == nil, seenStreak >= 2 {
-                active = now
-                onStart?(now)
-            }
-        } else {
-            seenStreak = 0
-            candidate = nil
-            if let active {
-                goneStreak += 1
-                // ~6 s without the mic: the call is over.
-                if goneStreak >= 3 {
-                    self.active = nil
-                    goneStreak = 0
-                    onEnd?(active)
-                }
-            }
+        switch (active, now) {
+        case (nil, .some(let meeting)):
+            active = meeting
+            onStart?(meeting)
+        case (.some(let was), nil):
+            active = nil
+            onEnd?(was)
+        case (.some(let was), .some(let meeting)) where was != meeting:
+            active = meeting
+            onEnd?(was)
+            onStart?(meeting)
+        default:
+            break
         }
     }
 

@@ -80,3 +80,10 @@
 "invalid output grammar" = "błędna gramatyka odpowiedzi";
 "the text is too long for the model" = "tekst jest za długi dla modelu";
 "the summary didn't come out right, try Summarize again" = "podsumowanie wyszło niepełne, kliknij Podsumuj jeszcze raz";
+
+/* Karta po zakończeniu nagrania */
+"Recording saved" = "Nagranie zapisane";
+"Transcript ready" = "Transkrypcja gotowa";
+"Transcribing… %d%%" = "Transkrypcja… %d%%";
+"Open" = "Otwórz";
+"Close" = "Zamknij";

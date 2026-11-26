@@ -88,7 +88,7 @@ struct MenuView: View {
         if recorder.isSaving {
             Hint(text: L("Saving…"), progress: true)
         } else if transcriber.state == .transcribing {
-            Hint(text: L("Transcribing…"), progress: true)
+            Hint(text: transcriber.statusText, progress: true)
         } else if case .summarizing(let part) = summarizer.state {
             Hint(text: [L("Writing summary…"), part].compactMap { $0 }.joined(separator: " "), progress: true)
         } else if last.transcriptPath != nil {

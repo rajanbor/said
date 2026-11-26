@@ -35,6 +35,26 @@ final class Recorder: ObservableObject {
     /// True while the mic and system audio are being mixed into the final file.
     @Published private(set) var isSaving = false
 
+    /// What the card under the menu bar is showing, if it is showing anything.
+    @Published private(set) var finished: Finished?
+
+    /// The recording that just ended, and how far Said has got with it.
+    struct Finished: Equatable {
+        var duration: TimeInterval
+        var source: String?
+        /// The transcript is written (so it can be opened).
+        var hasTranscript: Bool
+        var stage: Stage
+
+        enum Stage: Equatable {
+            case saving
+            case transcribing
+            case summarizing
+            case done
+            case failed(String)
+        }
+    }
+
     /// Also record what the Mac plays (for manual recordings; meetings always include the meeting app).
     @Published var recordSystemAudio: Bool {
         didSet { UserDefaults.standard.set(recordSystemAudio, forKey: Self.systemAudioKey) }
@@ -93,6 +113,17 @@ final class Recorder: ObservableObject {
     private lazy var prompt = FloatingPanel(size: NSSize(width: 268, height: 42)) {
         MeetingPromptView().environmentObject(self)
     }
+    private lazy var card = FloatingPanel(size: NSSize(width: 304, height: 54), anchor: .topTrailing) {
+        ResultCardView()
+            .environmentObject(self)
+            .environmentObject(self.transcriber)
+            .environmentObject(self.summarizer)
+    }
+    private var cardHide: Task<Void, Never>?
+    private var cardHideAfter: TimeInterval?
+    /// How long the card stays while Said is still working, and once it's finished.
+    private static let cardWorking: TimeInterval = 8
+    private static let cardDone: TimeInterval = 12
 
     static var folder: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -202,11 +233,17 @@ final class Recorder: ObservableObject {
         let source = recordingMeeting?.name
         recordingMeeting = nil
         isSaving = true
+        finished = Finished(duration: duration, source: source, hasTranscript: false, stage: .saving)
+        show(.saving, hideAfter: nil)
         Task {
             let url = await Self.finish(session)
             isSaving = false
             save(Recording(path: url.path, duration: duration, date: Date(), source: source))
-            if transcriber.isInstalled { transcribeLast() }
+            if transcriber.isInstalled {
+                transcribeLast()
+            } else {
+                show(.done, hideAfter: Self.cardDone)
+            }
         }
     }
 
@@ -264,19 +301,78 @@ final class Recorder: ObservableObject {
     /// Runs local transcription for the last recording (automatic when the model is installed).
     func transcribeLast() {
         guard let rec = last else { return }
-        Task {
-            guard let url = await transcriber.transcribe(rec) else { return }
+        show(.transcribing, hideAfter: Self.cardWorking)
+        Task(priority: .userInitiated) {
+            guard let url = await transcriber.transcribe(rec) else {
+                if case .failed(let message) = transcriber.state {
+                    show(.failed(message), hideAfter: Self.cardDone)
+                }
+                transcriber.releaseSoon()
+                return
+            }
             var updated = rec
             updated.transcriptPath = url.path
             if last?.path == rec.path { save(updated) }
-            if summarizer.isReady { await summarize(updated) }
+            transcriber.releaseSoon()
+            if summarizer.isReady {
+                show(.summarizing, hideAfter: Self.cardWorking)
+                await summarize(updated)
+            }
+            show(.done, hideAfter: Self.cardDone)
         }
     }
 
     /// Writes the summary into the last recording's transcript (automatic when a summary model is installed).
     func summarizeLast() {
         guard let rec = last else { return }
-        Task { await summarize(rec) }
+        Task(priority: .userInitiated) {
+            show(.summarizing, hideAfter: Self.cardWorking)
+            await summarize(rec)
+            show(.done, hideAfter: Self.cardDone)
+        }
+    }
+
+    // MARK: - The card under the menu bar
+
+    /// Shows (or updates) the card that says what happened to the recording that just ended.
+    /// `hideAfter` is how long it stays; `nil` keeps it until the next stage.
+    private func show(_ stage: Finished.Stage, hideAfter: TimeInterval?) {
+        guard !isRecording else { return hideResult() }
+        var current = finished ?? Finished(duration: last?.duration ?? 0, source: last?.source,
+                                           hasTranscript: false, stage: stage)
+        current.stage = stage
+        current.hasTranscript = last?.transcriptPath != nil
+        finished = current
+        card.show()
+        scheduleHide(hideAfter)
+    }
+
+    private func scheduleHide(_ after: TimeInterval?) {
+        cardHide?.cancel()
+        cardHide = nil
+        cardHideAfter = after
+        guard let after else { return }
+        cardHide = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(after))
+            guard !Task.isCancelled else { return }
+            self?.hideResult()
+        }
+    }
+
+    func hideResult() {
+        cardHide?.cancel()
+        cardHide = nil
+        card.hide()
+    }
+
+    /// The card waits while the pointer is on it.
+    func holdResult(_ hovering: Bool) {
+        if hovering {
+            cardHide?.cancel()
+            cardHide = nil
+        } else {
+            scheduleHide(cardHideAfter)
+        }
     }
 
     private func summarize(_ rec: Recording) async {
@@ -301,6 +397,11 @@ final class Recorder: ObservableObject {
             return
         }
         Notifier.shared.requestPermission()
+        hideResult()
+        finished = nil
+        // Load the transcription model now, in the background: by the time this recording
+        // stops it is ready, so transcribing can start straight away.
+        transcriber.prepare()
         silenceSince = nil
         silenceNotified = false
         diskWarned = false
@@ -340,6 +441,7 @@ final class Recorder: ObservableObject {
         } catch {
             self.error = error.localizedDescription
             recordingMeeting = nil
+            transcriber.releaseSoon()   // nothing to transcribe after all
         }
     }
 
@@ -375,7 +477,10 @@ final class Recorder: ObservableObject {
     private func tick() {
         guard let recorder else { return }
         recorder.updateMeters()
-        elapsed = recorder.currentTime
+        // The clock only shows seconds: publishing it 20 times a second would redraw the
+        // menu bar and the pill for nothing.
+        let time = recorder.currentTime
+        if Int(time) != Int(elapsed) { elapsed = time }
         // dB (-160...0) -> 0...1, with a usable range of roughly -50 dB to 0 dB.
         let db = recorder.averagePower(forChannel: 0)
         var level = max(0, min(1, (db + 50) / 50))

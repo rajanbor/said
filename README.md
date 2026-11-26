@@ -32,6 +32,8 @@ To update later, run the same command.
 
 **Recording a call.** When you join a call in Zoom, Teams, Google Meet or similar, Said asks *“Record and transcribe?”*. Click **Record**, and it captures both you and the other people, even if you wear headphones. When the call ends, it stops by itself. Ignore the question and it goes away after 30 seconds.
 
+**When it's done.** A card appears under the menu bar with the recording that was just saved and what Said is still doing with it: transcribing, writing the summary. It disappears on its own, and comes back with an **Open** button when the transcript is ready.
+
 **Finding your recordings.** Each recording gets its own folder in `Music/Said`, with the audio and a text file of everything that was said, with timestamps. The menu has a button that opens that folder.
 
 **Summaries.** Said can also put a short summary at the top of each transcript: what it was about, the key points, decisions, and who does what next. In the menu, under **Summaries**, pick a model and click **Download summary model**. From then on every transcript gets a summary by itself. It's written on your Mac, like the transcript.

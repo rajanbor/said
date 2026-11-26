@@ -1,14 +1,36 @@
 import AppKit
 import SwiftUI
 
-/// Borderless, non-activating floating panel. Always appears at the bottom centre of
-/// the screen; you can drag it anywhere while it's showing.
+/// Borderless, non-activating floating panel. It appears either at the bottom centre of the
+/// screen (the recording pill, which you can then drag anywhere) or just under the menu bar
+/// on the right (the card shown when a recording ends).
 /// It never steals focus from the app you're working in.
 @MainActor
 final class FloatingPanel {
-    private let panel: NSPanel
+    enum Anchor {
+        /// Bottom centre of the main screen, just above the Dock.
+        case bottomCenter
+        /// Top right, right under the menu bar — next to Said's own icon.
+        case topTrailing
+    }
 
-    init<Content: View>(size: NSSize, @ViewBuilder content: () -> Content) {
+    private let panel: NSPanel
+    private let anchor: Anchor
+    /// Builds the content view. It is thrown away whenever the panel hides: an animation in a
+    /// hidden SwiftUI view keeps redrawing (and keeps the CPU awake) as if it were on screen.
+    private let build: () -> NSView
+    private var installed = false
+    /// True while fading out, so a `show()` in that moment cancels the hide.
+    private var hiding = false
+
+    init<Content: View>(size: NSSize, anchor: Anchor = .bottomCenter,
+                        @ViewBuilder content: @escaping () -> Content) {
+        self.anchor = anchor
+        self.build = {
+            let host = NSHostingView(rootView: content())
+            host.frame = NSRect(origin: .zero, size: size)
+            return host
+        }
         panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: size),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -21,34 +43,50 @@ final class FloatingPanel {
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-        let host = NSHostingView(rootView: content())
-        host.frame = NSRect(origin: .zero, size: size)
-        panel.contentView = host
     }
 
     var isVisible: Bool { panel.isVisible }
 
     func show() {
-        let c = defaultCenter()
-        let s = panel.frame.size
-        panel.setFrameOrigin(NSPoint(x: c.x - s.width / 2, y: c.y - s.height / 2))
+        hiding = false
+        // Already up (and perhaps dragged somewhere): leave it where it is.
+        if panel.isVisible {
+            panel.alphaValue = 1
+            return panel.orderFrontRegardless()
+        }
+        if !installed {
+            panel.contentView = build()
+            installed = true
+        }
+        panel.setFrameOrigin(origin())
         panel.alphaValue = 0
         panel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { $0.duration = 0.2; panel.animator().alphaValue = 1 }
     }
 
     func hide() {
-        guard panel.isVisible else { return }
+        guard panel.isVisible, !hiding else { return }
+        hiding = true
         NSAnimationContext.runAnimationGroup({ $0.duration = 0.2; panel.animator().alphaValue = 0 }) {
-            MainActor.assumeIsolated { self.panel.orderOut(nil) }
+            MainActor.assumeIsolated {
+                guard self.hiding else { return }   // shown again while fading out
+                self.hiding = false
+                self.panel.orderOut(nil)
+                self.panel.contentView = nil
+                self.installed = false
+            }
         }
     }
 
-    /// Bottom centre of the main screen, just above the Dock.
-    private func defaultCenter() -> NSPoint {
+    private func origin() -> NSPoint {
         guard let f = NSScreen.main?.visibleFrame else { return .zero }
-        return NSPoint(x: f.midX, y: f.minY + 40 + panel.frame.height / 2)
+        let size = panel.frame.size
+        switch anchor {
+        case .bottomCenter:
+            return NSPoint(x: f.midX - size.width / 2, y: f.minY + 40)
+        case .topTrailing:
+            return NSPoint(x: f.maxX - size.width - 12, y: f.maxY - size.height - 8)
+        }
     }
 }
 
@@ -173,5 +211,116 @@ struct MeetingPromptView: View {
             .help(L("Not now"))
         }
         .modifier(PillBackground())
+    }
+}
+
+
+/// Black rounded card, for the panel shown after a recording.
+private struct CardBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.white.opacity(0.1)))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .environment(\.colorScheme, .dark)
+    }
+}
+
+/// Appears under the menu bar when a recording ends: what was saved, and what Said is still
+/// doing with it (saving, transcribing, writing the summary). Goes away by itself.
+struct ResultCardView: View {
+    @EnvironmentObject var recorder: Recorder
+    @EnvironmentObject var transcriber: Transcriber
+    @EnvironmentObject var summarizer: Summarizer
+
+    var body: some View {
+        HStack(spacing: 10) {
+            icon
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                Text(status)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.white.opacity(0.65))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .foregroundStyle(Color.white)
+
+            Spacer(minLength: 4)
+
+            if recorder.finished?.stage == .done, recorder.finished?.hasTranscript == true {
+                Button {
+                    recorder.openTranscript()
+                    recorder.hideResult()
+                } label: {
+                    Text(L("Open"))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.black)
+                        .padding(.horizontal, 10)
+                        .frame(height: 22)
+                        .background(Color.white, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button(action: recorder.hideResult) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.6))
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.plain)
+            .help(L("Close"))
+        }
+        .modifier(CardBackground())
+        // Stays as long as you are looking at it.
+        .onHover { recorder.holdResult($0) }
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        switch recorder.finished?.stage {
+        case .done:
+            Image(systemName: recorder.finished?.hasTranscript == true ? "doc.text.fill" : "checkmark.circle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.white.opacity(0.8))
+        case .failed:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(Color.orange)
+        default:
+            ProgressView().controlSize(.small)
+        }
+    }
+
+    private var title: String {
+        if recorder.finished?.stage == .done, recorder.finished?.hasTranscript == true {
+            return L("Transcript ready")
+        }
+        return L("Recording saved")
+    }
+
+    private var status: String {
+        guard let card = recorder.finished else { return "" }
+        switch card.stage {
+        case .saving:
+            return L("Saving…")
+        case .transcribing:
+            return transcriber.statusText
+        case .summarizing:
+            if case .summarizing(let part) = summarizer.state {
+                return [L("Writing summary…"), part].compactMap { $0 }.joined(separator: " ")
+            }
+            return L("Writing summary…")
+        case .done:
+            return [card.duration.clock, card.source].compactMap { $0 }.joined(separator: " · ")
+        case .failed(let message):
+            return message
+        }
     }
 }

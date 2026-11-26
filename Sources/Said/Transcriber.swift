@@ -5,6 +5,10 @@ import WhisperKit
 ///
 /// Network is used **only** inside `installModel()`, which runs when the user
 /// clicks "Download transcription model". After that, models load from disk with downloads disabled.
+///
+/// The model is kept in memory only while it is needed: it is loaded when a recording starts
+/// (`prepare()`), used when the recording stops, and dropped again (`releaseSoon()`). An idle
+/// Said holds no model at all.
 @MainActor
 final class Transcriber: ObservableObject {
     enum State: Equatable {
@@ -17,10 +21,15 @@ final class Transcriber: ObservableObject {
     }
 
     @Published private(set) var state: State = .notInstalled
+    /// How much of the recording is transcribed (0…1), while `state` is `.transcribing`.
+    @Published private(set) var progress: Double?
 
     /// Multilingual (incl. Polish), quantized large-v3 turbo, ~630 MB.
     static let variant = "large-v3-v20240930_turbo_632MB"
     private static let folderKey = "whisperModelFolder"
+    /// The model leaves memory this long after the last transcription.
+    private static let idleRelease: TimeInterval = 90
+    nonisolated private static let sampleRate = 16_000
 
     nonisolated static var modelsDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -29,6 +38,7 @@ final class Transcriber: ObservableObject {
 
     private var kit: WhisperKit?
     private var loading: Task<Void, Never>?
+    private var release: Task<Void, Never>?
     private var modelFolder: String? {
         get { UserDefaults.standard.string(forKey: Self.folderKey) }
         set { UserDefaults.standard.set(newValue, forKey: Self.folderKey) }
@@ -39,11 +49,18 @@ final class Transcriber: ObservableObject {
         return FileManager.default.fileExists(atPath: modelFolder)
     }
 
+    /// True while the model sits in memory (ready to transcribe without waiting).
+    var isLoaded: Bool { kit != nil }
+
+    /// "Transcribing… 40%" once there is something to count.
+    var statusText: String {
+        guard let progress, progress >= 0.01 else { return L("Transcribing…") }
+        return L("Transcribing… %d%%", Int(progress * 100))
+    }
+
     init() {
-        if isInstalled {
-            state = .preparing
-            Task { await load() }
-        }
+        // Nothing is loaded here on purpose: a Said that isn't recording uses no memory for models.
+        if isInstalled { state = .ready }
     }
 
     /// One-time, user-initiated download of the model and tokenizer.
@@ -61,9 +78,40 @@ final class Transcriber: ObservableObject {
             modelFolder = folder.path
             // First load may also fetch the tokenizer into modelsDir (still part of setup).
             await load(allowDownload: true)
+            releaseSoon()
         } catch {
             state = .failed(L("Couldn't download the model: %@", error.localizedDescription))
         }
+    }
+
+    // MARK: - Memory
+
+    /// Starts loading the model in the background, so a recording that stops in a minute's
+    /// time doesn't have to wait for it. Called when recording starts.
+    func prepare() {
+        release?.cancel()
+        release = nil
+        guard isInstalled, kit == nil, loading == nil else { return }
+        Task { await load() }
+    }
+
+    /// Drops the model from memory after a while, unless it is needed again before then.
+    func releaseSoon() {
+        release?.cancel()
+        release = nil
+        guard kit != nil else { return }
+        release = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.idleRelease))
+            guard !Task.isCancelled else { return }
+            await self?.unload()
+        }
+    }
+
+    private func unload() async {
+        release = nil
+        guard state != .transcribing, let kit else { return }
+        self.kit = nil
+        await kit.unloadModels()
     }
 
     /// Loads the model once; concurrent callers wait for the same load.
@@ -95,22 +143,49 @@ final class Transcriber: ObservableObject {
         }
     }
 
+    // MARK: - Transcribing
+
     /// Transcribes `rec` and writes a Markdown file next to the audio. Returns its URL.
     func transcribe(_ rec: Recording) async -> URL? {
+        release?.cancel()
+        release = nil
         if kit == nil { await load() }
         guard let kit else { return nil }
         state = .transcribing
-        defer { if state == .transcribing { state = .ready } }
-
-        var options = DecodingOptions()
-        options.detectLanguage = true
-        options.skipSpecialTokens = true
-        options.chunkingStrategy = .vad
+        progress = nil
+        // Said is a menu bar app and so always in the background, where macOS would otherwise
+        // slow this work down (App Nap). Idle sleep is still allowed.
+        let activity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep, reason: "Transcribing a recording")
+        defer {
+            ProcessInfo.processInfo.endActivity(activity)
+            progress = nil
+            if state == .transcribing { state = .ready }
+        }
 
         do {
             let path = rec.path
-            let audio = try await Task.detached { try AudioProcessor.loadAudioAsFloatArray(fromPath: path) }.value
-            let results = try await kit.transcribe(audioArray: audio, decodeOptions: options)
+            let audio = try await Task.detached(priority: .userInitiated) {
+                try AudioProcessor.loadAudioAsFloatArray(fromPath: path)
+            }.value
+
+            var options = DecodingOptions()
+            options.detectLanguage = true
+            options.skipSpecialTokens = true
+            // Split long audio on silence; the pieces are then decoded several at a time.
+            options.chunkingStrategy = .vad
+
+            let seconds = max(1, Double(audio.count) / Double(Self.sampleRate))
+            let onSegments: SegmentDiscoveryCallback = { [weak self] segments in
+                guard let furthest = segments.map({ Double($0.end) }).max() else { return }
+                Task { @MainActor in
+                    let done = min(1, furthest / seconds)
+                    if done > (self?.progress ?? 0) { self?.progress = done }
+                }
+            }
+
+            let results = try await kit.transcribe(audioArray: audio, decodeOptions: options,
+                                                   segmentCallback: onSegments)
             // Whisper invents text for silence ("Thank you", "Спасибо"), so keep only segments with speech.
             var segments: [TranscriptionSegment] = []
             var speechPerLanguage: [String: Int] = [:]
